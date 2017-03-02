@@ -1,0 +1,735 @@
+//
+//  WhalePayViewController.m
+//  WhalePaySDK
+//
+//  Created by 李勇 on 2017/3/2.
+//  Copyright © 2017年 liyong. All rights reserved.
+//
+
+#import "WhalePayViewController.h"
+
+#import "NSDate+WhaleHelper.h"
+#import "NSString+WhaleHelper.h"
+#import "MBProgressHUD.h"
+#import "ControllerActivity.h"
+#import "DataSigner.h"
+#import "DataVerifier.h"
+#import "Base64Data.h"
+#import "SecKeyWrapper.h"
+#import "RSAUtil.h"
+
+
+/**
+ SDK与金融平台的交互流程：
+ 1、使用金融平台的appkey请求鉴权微服务，获取token
+ 2、使用token请求/account/listAccountType接口获取接入商支持的收费通道
+ 3、使用token请求/transaction/prepay接口创建预付单
+ */
+
+#define AuthUrl @"http://neotest.kakatool.cn:8098/app/auth"//鉴权微服务 POST
+#define PayWayUrl @"http://neotest.kakatool.cn:8097/account/listAccountType?access_token="//接口获取接入商支持的收费通道 POST
+#define kUrl @"http://neotest.kakatool.cn:8097/transaction/prepay" // 创建预支付订单的地址，金融平台地址
+#define PrePayUrl @"http://neotest.kakatool.cn:8097/transaction/prepay?access_token="//预支付订单
+
+
+
+@implementation WPOrder
+
+@end
+
+
+@interface WhalePayViewController ()
+
+@property (strong, nonatomic) WPOrder *wpOrder;//
+@property (strong, nonatomic) NSDictionary *payWay;//选择的支付通道
+@property (strong, nonatomic) NSMutableArray *payWayList;//支付方式
+@property (copy, nonatomic) NSString *access_token;//鉴权token
+@property (copy, nonatomic) NSString *expire;//过期时间
+
+@property (nonatomic, copy) NSString *appkey;//接入应用新增成功后，系统将自动生成20位的appkey和32位的appsercet
+@property (nonatomic, copy) NSString *appsecret;//接入应用新增成功后，系统将自动生成20位的appkey和32位的appsercet
+@property (copy, nonatomic) NSString *wxAppid;//微信支付appid
+
+
+@property (copy, nonatomic) AKPayCompletion akCompletionBlock;
+
+@property (strong, nonatomic) NSDictionary *payResult;//支付结果
+
+@end
+
+
+@implementation WhalePayViewController
+
+//单例
+@def_singleton(WhalePayViewController);
+
+- (NSMutableArray *)payWayList{
+    if (!_payWayList){
+        _payWayList = [NSMutableArray array];
+    }
+    return _payWayList;
+}
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    // Do any additional setup after loading the view, typically from a nib.
+    
+    self.view.backgroundColor = RGBCOLOR(240, 240, 240);
+    self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    
+    if (![self.bundleName isNotNull]){
+        self.bundleName = @"LHQResources";
+    }
+    //返回按钮
+    NSString * path = [[NSBundle mainBundle] pathForResource:self.bundleName ofType:@"bundle"];
+    UIImage *backImg = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"arrow.png"]];
+    UIButton *backBtn = [[UIButton alloc] initWithFrame:CGRectMake(15, 25, 10, 15)];
+    [backBtn setImage:backImg forState:UIControlStateNormal];
+    [backBtn addTarget:self action:@selector(dealPayResult) forControlEvents:UIControlEventTouchUpInside];
+    self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:backBtn];
+    
+    //默认title
+    if (![self.navigationItem.title isNotNull]){
+        self.navigationItem.title = @"支付";
+    }
+    
+    
+}
+
+- (void)dealPayResult{
+    if (self.payResult == nil || self.payResult.allKeys.count == 0){
+        self.payResult = @{
+                           @"code" : @"1000",
+                           @"message" : @"客户取消操作"
+                           };
+    }
+    
+    self.akCompletionBlock(self.payResult);
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
+- (void)setupTableHeadView:(WPOrder *)wpOrder{
+    
+    UIView *tableheadView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, SCRREN_WIDTH, 160)];
+    tableheadView.backgroundColor = RGBCOLOR(240, 240, 240);
+    
+    UIView *subView = [[UIView alloc] initWithFrame:CGRectMake(0, 10, SCRREN_WIDTH, 140)];
+    subView.backgroundColor = [UIColor whiteColor];
+    [tableheadView addSubview:subView];
+    
+    //待支付金额
+    UILabel *lbl1 = [[UILabel alloc] initWithFrame:CGRectMake(0, 10, SCRREN_WIDTH, 21)];
+    lbl1.text = @"待支付金额";
+    lbl1.textAlignment = NSTextAlignmentCenter;
+    lbl1.textColor = RGBCOLOR(33, 33, 33);
+    lbl1.font = [UIFont systemFontOfSize:14.0];
+    [subView addSubview:lbl1];
+    
+    //支付金额
+    UILabel *lbl2 = [[UILabel alloc] initWithFrame:CGRectMake(0, 35, SCRREN_WIDTH, 40)];
+    lbl2.text = [NSString stringWithFormat:@"%@元",wpOrder.money];
+    lbl2.textAlignment = NSTextAlignmentCenter;
+    lbl2.textColor = [UIColor blackColor];
+    lbl2.font = [UIFont systemFontOfSize:30.0];
+    [subView addSubview:lbl2];
+    
+    //订单金额标题
+    UILabel *lbl3 = [[UILabel alloc] initWithFrame:CGRectMake(10, 90, 80, 21)];
+    lbl3.text = @"订单金额";
+    lbl3.textAlignment = NSTextAlignmentLeft;
+    lbl3.textColor = RGBCOLOR(183, 183, 183);
+    lbl3.font = [UIFont systemFontOfSize:14.0];
+    [subView addSubview:lbl3];
+    
+    //订单金额内容
+    UILabel *lbl4 = [[UILabel alloc] initWithFrame:CGRectMake(100, 90, SCRREN_WIDTH - 110, 21)];
+    lbl4.text = [NSString stringWithFormat:@"%@元",wpOrder.money];
+    lbl4.textAlignment = NSTextAlignmentRight;
+    lbl4.textColor = RGBCOLOR(183, 183, 183);
+    lbl4.font = [UIFont systemFontOfSize:14.0];
+    [subView addSubview:lbl4];
+    
+    //产品信息标题
+    UILabel *lbl5 = [[UILabel alloc] initWithFrame:CGRectMake(10, 111, 80, 21)];
+    lbl5.text = @"产品信息";
+    lbl5.textAlignment = NSTextAlignmentLeft;
+    lbl5.textColor = RGBCOLOR(183, 183, 183);
+    lbl5.font = [UIFont systemFontOfSize:14.0];
+    [subView addSubview:lbl5];
+    
+    //产品信息内容
+    UILabel *lbl6 = [[UILabel alloc] initWithFrame:CGRectMake(100, 111, SCRREN_WIDTH - 110, 21)];
+    lbl6.text = wpOrder.content;
+    lbl6.textAlignment = NSTextAlignmentRight;
+    lbl6.textColor = RGBCOLOR(183, 183, 183);
+    lbl6.font = [UIFont systemFontOfSize:14.0];
+    [subView addSubview:lbl6];
+    
+    self.tableView.tableHeaderView = tableheadView;
+}
+
+
+/**
+ 支付调用接口(支付宝/微信)
+ 
+ @param wpOrder wpOrder 对象(JSON 格式字符串 或 NSDictionary)
+ @param viewController 当前控制器，做跳转用
+ @param completion 支付结果回调 Block
+ */
+- (void)createPayment:(WPOrder *)wpOrder viewController:(UIViewController *)viewController withCompletion:(AKPayCompletion)completion{
+    
+    //1.检测是否注册成功
+    if ([self.appkey isNotNull] && [self.appsecret isNotNull]){
+        //2.检测必要条件
+        if ([self checkRequireParams:wpOrder]){
+            //3.跳转页面
+            [viewController.navigationController pushViewController:self animated:YES];
+            //4.鉴权
+            if ([self isLocalTokenCanUse]){
+                //获取支付方式
+                [self getPayWay:self.wpOrder];
+            }else{
+                //重新鉴权并获取支付方式
+                [self getToken:wpOrder from:1];
+            }
+            //5.保存回调代码
+            self.akCompletionBlock = completion;
+        }else{
+            [MBProgressHUD showError:@"请补全必要参数" toView:viewController.view];
+        }
+    }else{
+        [MBProgressHUD showError:@"注册ID失败" toView:viewController.view];
+    }
+}
+
+//1.检测必要条件
+- (BOOL)checkRequireParams:(WPOrder *)wpOrder{
+    if ([wpOrder.pno isNotNull] && [wpOrder.cno isNotNull] && [wpOrder.money isNotNull] && [wpOrder.orderno isNotNull] && [wpOrder.content isNotNull] && [wpOrder.userId isNotNull]){
+        
+        //判断支持的支付通道
+        if (wpOrder.destArray.count == 0){
+            return NO;
+        }
+        
+        //显示支付信息
+        [self setupTableHeadView:wpOrder];
+        
+        self.wpOrder = wpOrder;
+        
+        self.wpOrder.detail = wpOrder.detail ? wpOrder.detail : @"";
+        self.wpOrder.starttime = wpOrder.starttime ? wpOrder.starttime : @"";
+        self.wpOrder.stoptime = wpOrder.stoptime ? wpOrder.stoptime : @"";
+        self.wpOrder.callback = wpOrder.callback ? wpOrder.callback : @"";
+        self.wpOrder.remoteip = wpOrder.remoteip ? wpOrder.remoteip : @"";
+        self.wpOrder.mobile = wpOrder.mobile ? wpOrder.mobile : @"";
+        self.wpOrder.userName = wpOrder.userName ? wpOrder.userName : @"";
+        self.wpOrder.city = wpOrder.city ? wpOrder.city : @"";
+        self.wpOrder.province = wpOrder.province ? wpOrder.province : @"";
+        self.wpOrder.block = wpOrder.block ? wpOrder.block : @"";
+        self.wpOrder.gbName = wpOrder.gbName ? wpOrder.gbName : @"";
+        
+        return YES;
+    }
+    return NO;
+}
+
+/**
+ *  回调结果接口(支付宝/微信/测试模式)
+ *
+ *  @param url              结果url
+ *  @param completion  支付结果回调 Block，保证跳转支付过程中，当 app 被 kill 掉时，能通过这个接口得到支付结果
+ *
+ *  @return                 当无法处理 URL 或者 URL 格式不正确时，会返回 NO。
+ */
+- (BOOL)handleOpenURL:(NSURL *)url withCompletion:(AKPayCompletion)completion{
+    
+    
+    return YES;
+}
+
+/**
+ *  回调结果接口(支付宝/微信/测试模式)
+ *
+ *  @param url                结果url
+ *  @param sourceApplication  源应用 Bundle identifier
+ *  @param completion    支付结果回调 Block，保证跳转支付过程中，当 app 被 kill 掉时，能通过这个接口得到支付结果
+ *
+ *  @return                   当无法处理 URL 或者 URL 格式不正确时，会返回 NO。
+ */
+- (BOOL)handleOpenURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication withCompletion:(AKPayCompletion)completion{
+    
+    
+    return YES;
+}
+
+/**
+ *  打开app时 注册APPID（微信）
+ *
+ *
+ */
+- (void)setAppId:(NSDictionary *)dict{
+    self.wxAppid = [dict objectForKey:@"wxAppid"];
+    self.appkey = [dict objectForKey:@"appkey"];
+    self.appsecret = [dict objectForKey:@"appsecret"];
+    
+    
+}
+
+
+
+#pragma mark - 获取token
+//from    1:支付通道   2:预支付订单
+- (void)getToken:(WPOrder *)wpOrder from:(int)from{
+    //加载等待......
+    [MBProgressHUD showHUDAddedTo:self.view animated:YES];
+    
+    //重新加载token
+    NSURL* url = [NSURL URLWithString:AuthUrl];
+    NSMutableURLRequest * postRequest = [NSMutableURLRequest requestWithURL:url];
+    NSString *appkey = self.appkey;
+    NSString *appsecret = self.appsecret;
+    NSString *ts = [NSDate phpTimestamp];
+    NSString *sign = [[NSString stringWithFormat:@"%@%@%@",appkey,ts,appsecret] MD5Hash];
+    NSDictionary* dict = @{
+                           @"appkey"  : appkey,
+                           @"timestamp" : ts,
+                           @"signature" : sign
+                           };
+    NSData* data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *bodyData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    [postRequest setHTTPBody:[NSData dataWithBytes:[bodyData UTF8String] length:strlen([bodyData UTF8String])]];
+    [postRequest setHTTPMethod:@"POST"];
+    [postRequest setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    NSOperationQueue *queue = [[NSOperationQueue alloc] init];
+    [NSURLConnection sendAsynchronousRequest:postRequest queue:queue completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSHTTPURLResponse* httpResponse = (NSHTTPURLResponse*)response;
+            if (httpResponse.statusCode == 2001) {
+                NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
+                [MBProgressHUD showError:@"缺少key" toView:self.view];
+                return;
+            }
+            if (httpResponse.statusCode == 2002) {
+                NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
+                [MBProgressHUD showError:@"缺少时间戳" toView:self.view];
+                return;
+            }
+            if (httpResponse.statusCode == 2003) {
+                NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
+                [MBProgressHUD showError:@"无效的时间戳，时间戳与当前时间误差超过20分钟" toView:self.view];
+                return;
+            }
+            if (httpResponse.statusCode == 2004) {
+                NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
+                [MBProgressHUD showError:@"缺少签名" toView:self.view];
+                return;
+            }
+            if (httpResponse.statusCode == 2005) {
+                NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
+                [MBProgressHUD showError:@"验证失败，请确认appkey和appsecret" toView:self.view];
+                return;
+            }
+            if (httpResponse.statusCode == 2006) {
+                NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
+                [MBProgressHUD showError:@"应用不存在,请联系奥科管理员" toView:self.view];
+                return;
+            }
+            if (connectionError != nil) {
+                NSLog(@"error = %@", connectionError);
+                [MBProgressHUD showError:[NSString stringWithFormat:@"%@",connectionError] toView:self.view];
+                return;
+            }
+            
+            NSDictionary *result = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+            NSLog(@"%@",result);
+            if (result != nil && result.allKeys.count > 0){
+                NSString *access_token = [[result objectForKey:@"content"] objectForKey:@"access_token"];
+                NSString *expire = [[result objectForKey:@"content"] objectForKey:@"expire"];
+                self.access_token = [NSString stringWithFormat:@"%@",access_token];
+                self.expire = [NSString stringWithFormat:@"%@",expire];
+                
+                if (![self.access_token isNotNull] || ![self.expire isNotNull]){
+                    [MBProgressHUD showError:@"鉴权失败，请重新尝试" toView:self.view];
+                    NSLog(@"获取token失败");
+                    [self.navigationController popViewControllerAnimated:YES];
+                    return;
+                }
+                
+                if (from == 1){
+                    [self getPayWay:wpOrder];
+                }else if (from == 2){
+                    [self getPreparePayOrderPayWay:self.payWay];
+                }
+                
+            }else{
+                [MBProgressHUD showError:@"鉴权失败，请重新尝试" toView:self.view];
+                [self.navigationController popViewControllerAnimated:YES];
+            }
+            
+        });
+    }];
+}
+
+//本地token的缓存是否可用
+- (BOOL)isLocalTokenCanUse{
+    if (![self.access_token isNotNull] || ![self.expire isNotNull]){
+        return NO;
+    }
+    NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
+    [dateFormatter setDateFormat:@"yyyyMMddHHmm"];
+    [dateFormatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:8*60*60]];//直接指定时区，这里是东8区
+    NSString *date = [dateFormatter stringFromDate:[NSDate date]];
+    NSString *expireDate = [NSDate longlongToDateTime:self.expire formator:@"yyyyMMddHHmm"];
+    double preTime = [expireDate doubleValue] - [date doubleValue];
+    
+    if ([self.access_token isNotNull] && [self.expire isNotNull] && preTime > 5){
+        return YES;
+    }else{
+        return NO;
+    }
+}
+
+#pragma mark - 支付方式
+- (void)getPayWay:(WPOrder *)wpOrder{
+    //判断token是否失效
+    if (![self isLocalTokenCanUse]){
+        [self getToken:self.wpOrder from:2];
+        return;
+    }
+    
+    NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@%@",PayWayUrl,self.access_token]];
+    NSMutableURLRequest * postRequest=[NSMutableURLRequest requestWithURL:url];
+    NSDictionary* dict = @{
+                           @"pno"  : wpOrder.pno,
+                           @"cno" : wpOrder.cno
+                           };
+    NSData* data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *bodyData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    
+    [postRequest setHTTPBody:[NSData dataWithBytes:[bodyData UTF8String] length:strlen([bodyData UTF8String])]];
+    [postRequest setHTTPMethod:@"POST"];
+    [postRequest setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    NSOperationQueue *queue = [[NSOperationQueue alloc] init];
+    [NSURLConnection sendAsynchronousRequest:postRequest queue:queue completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            
+            NSDictionary *result = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+            NSLog(@"%@",result);
+            NSDictionary *content = [result objectForKey:@"content"];
+            if (result.allKeys.count >0 && [[result objectForKey:@"code"] integerValue] == 0 && content.allKeys.count > 0){
+                //加载成功
+                [self.payWayList removeAllObjects];
+                NSArray *list = [content objectForKey:@"list"];
+                
+#warning ----------- TODO 暂时仅支持双乾支付
+                for (NSDictionary *dict1 in list) {
+                    for (NSDictionary *dict2 in wpOrder.destArray) {
+                        if ([[dict1 objectForKey:@"atid"] integerValue] == [[dict2 objectForKey:@"atid"] integerValue]){
+                            [self.payWayList addObject:dict1];
+                        }
+                    }
+                }
+                //                for (NSDictionary *dict1 in list) {
+                //                        if ([[dict1 objectForKey:@"atid"] integerValue] == 31){
+                //                            [self.payWayList addObject:dict1];
+                //                        }
+                //                }
+                
+                if (self.payWayList.count > 1){
+                    //支付方式列表
+                    [self.tableView reloadData];
+                    [MBProgressHUD hideHUDForView:self.view animated:YES];
+                }else if (self.payWayList.count == 1){
+                    //只有一种支付方式
+                    self.payWay = [NSDictionary dictionaryWithDictionary:self.payWayList[0]];
+                    [self getPreparePayOrderPayWay:self.payWayList[0]];
+                    //支付方式列表
+                    //                    [self.tableView reloadData];
+                    [MBProgressHUD hideHUDForView:self.view animated:YES];
+                }else{
+                    //无支付方式可用
+                    [MBProgressHUD showError:@"无支付方式可用,请联系奥科管理员" toView:self.view];
+                    [self.navigationController popViewControllerAnimated:YES];
+                }
+            }else{
+                //加载失败
+                [MBProgressHUD showError:@"获取支付方式失败，请重新尝试" toView:self.view];
+                [self.navigationController popViewControllerAnimated:YES];
+            }
+        });
+    }];
+}
+
+#pragma mark - tableview
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section{
+    if (self.payWayList.count > 0){
+        return self.payWayList.count;
+    }
+    return 0;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    static NSString *cellID = @"AKPayWayCell";
+    
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
+    if (!cell){
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellID];
+        UIView *line  = [[UIView alloc] initWithFrame:CGRectMake(0, 43, [UIScreen mainScreen].bounds.size.width, 1)];
+        line.backgroundColor = RGBCOLOR(240, 240, 240);;
+        [cell addSubview:line];
+    }
+    
+    
+    if (self.payWayList.count > indexPath.row){
+        NSDictionary *dict = self.payWayList[indexPath.row];
+        cell.textLabel.text = [dict objectForKey:@"name"];
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    }
+    
+    return cell;
+}
+
+- (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
+    
+    return 44;
+}
+
+- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
+    [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    if (self.payWayList.count > indexPath.row){
+        NSDictionary *dict = self.payWayList[indexPath.row];
+        self.payWay = [NSDictionary dictionaryWithDictionary:dict];
+        [self getPreparePayOrderPayWay:dict];
+    }
+    
+}
+
+
+#pragma mark - 获取预支付订单
+- (void)getPreparePayOrderPayWay:(NSDictionary *)payWay{
+    //判断token是否失效
+    if (![self isLocalTokenCanUse]){
+        [self getToken:self.wpOrder from:2];
+        return;
+    }
+    
+    NSString *atid = [payWay objectForKey:@"atid"];
+    
+    NSString *orgtype;
+    NSString *orgaccountno;
+    NSString *desttype;
+    NSString *destaccountno;
+    
+    if ([atid integerValue] == 4 || [atid integerValue] == 5 || [atid integerValue] == 31){
+        //第三方支付（微信，支付宝，双乾），dict为收款方信息
+        orgtype = @"0";
+        orgaccountno = @"0";
+        desttype = atid;
+        destaccountno = [payWay objectForKey:@"pano"];
+    }else{
+        //非第三方支付，dict为付款方信息
+        orgtype = atid;
+        orgaccountno = [payWay objectForKey:@"cano"];
+        for (NSDictionary *dic in self.wpOrder.destArray) {
+            if ([[dic objectForKey:@"atid"] integerValue] == [atid integerValue]){
+                destaccountno = [dic objectForKey:@"pano"];
+            }
+        }
+        desttype = atid;
+    }
+    
+    
+    
+    NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@%@",PrePayUrl,self.access_token]];
+    NSMutableURLRequest * postRequest=[NSMutableURLRequest requestWithURL:url];
+    NSDictionary* dict = @{
+                           @"money"  : self.wpOrder.money,
+                           @"orderno"  : self.wpOrder.orderno,
+                           @"content"  : self.wpOrder.content,
+                           @"orgtype"  : orgtype,
+                           @"orgaccountno"  : orgaccountno,
+                           @"desttype"  : desttype,
+                           @"destaccountno"  : destaccountno,
+                           @"detail"  : self.wpOrder.detail,
+                           @"starttime"  : self.wpOrder.starttime,
+                           @"stoptime"  : self.wpOrder.stoptime,
+                           @"callback"  : self.wpOrder.callback,
+                           @"remoteip"  : self.wpOrder.remoteip
+                           };
+    NSData* data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
+    NSString *bodyData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    
+    [postRequest setHTTPBody:[NSData dataWithBytes:[bodyData UTF8String] length:strlen([bodyData UTF8String])]];
+    [postRequest setHTTPMethod:@"POST"];
+    [postRequest setValue:@"application/json; charset=utf-8" forHTTPHeaderField:@"Content-Type"];
+    
+    NSOperationQueue *queue = [[NSOperationQueue alloc] init];
+    [NSURLConnection sendAsynchronousRequest:postRequest queue:queue completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSDictionary *result = [NSJSONSerialization JSONObjectWithData:data options:NSJSONReadingMutableContainers error:nil];
+            NSLog(@"%@",result);
+            NSDictionary *content = [result objectForKey:@"content"];
+            if ([content isKindOfClass:[NSDictionary class]]){
+                if (result != nil && content != nil && result.allKeys.count > 0 && content.allKeys.count > 0 && [[result objectForKey:@"code"] integerValue] == 0){
+                    NSDictionary *payinfo = [content objectForKey:@"payinfo"];
+                    if (payinfo != nil && payinfo.allKeys.count > 0){
+                        //支付订单
+                        [self payAction:payinfo];
+                    }else{
+                        [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
+                    }
+                }else{
+                    [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
+                }
+            }else{
+                [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
+            }
+            
+        });
+    }];
+}
+
+
+- (void)payAction:(NSDictionary *)payInfo{
+    NSString *payType = [[payInfo objectForKey:@"paytype"] trim];
+    
+    if ([payType isEqualToString:@"weixin"]){
+        //微信支付
+        [self wxPayAction:payInfo];
+    }else if ([payType isEqualToString:@"alipay"]){
+        //支付宝支付
+        [self aliPayAction:payInfo];
+    }else if ([payType isEqualToString:@"lhq"]){
+        //双乾支付
+        [self lhqPayAction:payInfo];
+    }else if ([payType isEqualToString:@"fanpiao"]){
+        //全国饭票支付
+        [self fanpiaoPayAction:payInfo];
+    }else if ([payType isEqualToString:@"lfanpiao"]){
+        //地方饭票支付
+        [self lfanpaioPayAction:payInfo];
+    }else{
+        [MBProgressHUD showError:@"未知支付方式" toView:self.view];
+    }
+}
+
+#pragma mark - 支付
+
+//微信支付
+- (void)wxPayAction:(NSDictionary *)payInfo{
+    
+}
+
+//支付宝支付
+- (void)aliPayAction:(NSDictionary *)payInfo{
+    
+}
+
+//双乾支付
+- (void)lhqPayAction:(NSDictionary *)payInfo{
+    NSString *merNo = [payInfo objectForKey:@"merNo"];
+    NSString *tno = [payInfo objectForKey:@"tno"];
+    NSDictionary *dic = @{
+                          @"userNo" : [NSString stringWithFormat:@"%@%@%@",merNo,self.wpOrder.pno,self.wpOrder.userId],                         // 用户编号
+                          @"merNo" : merNo,                   // 商户编号
+                          @"mobile" : self.wpOrder.mobile,                // 用户手机号
+                          @"orderNum" : tno,      // 交易订单号
+                          @"amount" : self.wpOrder.money,                        // 产生的交易金额
+                          @"orderType" :@"CJ01",                       // 支付方式
+                          @"goods_desc" : self.wpOrder.content,  // 商品说明
+                          @"goods_name" : self.wpOrder.content,                    //商品名称
+                          @"userName" : self.wpOrder.userName,
+                          @"province" : self.wpOrder.province,
+                          @"city" : self.wpOrder.city,
+                          @"block" : self.wpOrder.block,
+                          @"gbName" : self.wpOrder.gbName
+                          };
+    
+    [ControllerActivity setSDKServiceURL:@"http://218.4.234.150:10080/creditsslpay/"];
+    [ControllerActivity setParams:dic signInfoBlock:^NSString *(NSString *secretKey, NSString *signInfo, int isSignWithPrivateKey) {
+        if (isSignWithPrivateKey == 0) {
+            return [self decryWithPriviteKey:secretKey origaStr:signInfo];     // 解密
+        } else if (isSignWithPrivateKey == 1){
+            return [self encryWithPublicKey:secretKey origaStr:signInfo];      // 加密
+        } else {
+            return [self doRsaPriviteKey:secretKey origalStr:signInfo];                   // 签名
+        }
+    } resultBlock:^(NSDictionary *result) {
+        NSLog(@"%@", result);
+        if ([result.allKeys containsObject:@"OrderState"]) {
+            if ([[result objectForKey:@"OrderState"] integerValue] == 0){
+                self.payResult = @{
+                                   @"code" : @"0",
+                                   @"message" : @"支付成功"
+                                   };
+                [self dealPayResult];
+            }else{
+                self.payResult = @{
+                                   @"code" : [result objectForKey:@"OrderState"],
+                                   @"message" : [result objectForKey:@"StateExplain"]
+                                   };
+                [self dealPayResult];
+            }
+            
+        } else if ([result.allKeys containsObject:@"resultCode"]) {
+            self.payResult = @{
+                               @"code" : [result objectForKey:@"resultCode"],
+                               @"message" : [result objectForKey:@"resMess"]
+                               };
+            [self dealPayResult];
+            
+        } else {
+            
+        }
+    }];
+    
+}
+
+//全国饭票支付
+- (void)fanpiaoPayAction:(NSDictionary *)payInfo{
+    
+}
+
+//地方饭票支付
+- (void)lfanpaioPayAction:(NSDictionary *)payInfo{
+    
+}
+
+
+#pragma mark - 双乾支付加密解密过程
+// 私钥签名
+-(NSString*)doRsaPriviteKey:(NSString *)priviteKey origalStr:(NSString*)string
+{
+    id<DataSigner> signer;
+    signer = CreateRSADataSigner(priviteKey);
+    NSString *signedString = [signer signString:string];
+    return signedString;
+}
+
+// 公钥验签
+- (BOOL)verifyRsaPublicKey:(NSString *)publicKey origalStr:(NSString *)string signStr:(NSString *)signString
+{
+    id<DataVerifier> verifySigner;
+    verifySigner = CreateRSADataVerifier(publicKey);
+    bool verifyRs = [verifySigner verifyString:string withSign:signString];
+    return verifyRs;
+}
+
+//公钥加密数据
+-(NSString *)encryWithPublicKey:(NSString *)publicKey origaStr:(NSString *)string
+{
+    //生成一个随机的8位字符串，作为des加密数据的key,对数据进行des加密，对加密后的数据用公钥再进行一次rsa加密
+    NSString *encryptString = [RSAUtil encryptString: string publicKey:publicKey];
+    return encryptString;
+}
+
+//私钥解密数据
+-(NSString *)decryWithPriviteKey:(NSString *)priviteKey origaStr:(NSString *)string
+{
+    return [RSAUtil decryptString:string privateKey:priviteKey];
+}
+
+@end

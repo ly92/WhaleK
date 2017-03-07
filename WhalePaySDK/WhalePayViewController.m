@@ -18,6 +18,7 @@
 #import "SecKeyWrapper.h"
 #import "RSAUtil.h"
 #import "WhalePayWayCell.h"
+#import "UIImageView+WhaleHelper.h"
 
 
 /**
@@ -98,7 +99,7 @@
     if (![self.navigationItem.title isNotNull]){
         self.navigationItem.title = @"支付";
     }
-
+    
 }
 
 - (void)viewDidLoad {
@@ -560,15 +561,14 @@
         
         NSString *ctype = [dict objectForKey:@"ctype"];
         NSString *type = [[dict objectForKey:@"type"] trim];
+        
         NSString * path = [[NSBundle mainBundle] pathForResource:self.bundleName ofType:@"bundle"];
+        UIImage *icon = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"payicon"]];
+        icon = [icon imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+        [cell.iconImgV setImageUrlStr:[dict objectForKey:@"iconurl"] WithPlaceholder:icon];
         
         if ([ctype integerValue] == 1){
             //第三方支付
-            UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"sanfang"]];
-            img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-            cell.iconImgV.image = img;
-
-            
             for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
                 if ([type isEqualToString:@"alipay"] && [receipt.type isEqualToString:@"alipay"]){
                     //支付宝
@@ -588,17 +588,6 @@
             }
         }else if([ctype integerValue] == 4){
             //虚拟货币支付
-            
-            if ([[dict objectForKey:@"type"] isEqualToString:@"fanpiao"]){
-                UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"fanpiao"]];
-                img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-                cell.iconImgV.image = img;
-            }else{
-                UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"lfanpiao"]];
-                img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
-                cell.iconImgV.image = img;
-            }
-            
             BOOL needChange = YES;
             for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
                 if ([receipt.atid integerValue] == [[dict objectForKey:@"atid"] integerValue]){
@@ -615,8 +604,6 @@
         }else{
         }
         
-        
-        
         if (self.selectedIndex.row == indexPath.row){
             UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"choose_blue.png"]];
             img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
@@ -631,7 +618,7 @@
             img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
             [cell.selectedBtn setImage:img forState:UIControlStateNormal];
         }
-
+        
     }
     
     return cell;
@@ -649,7 +636,7 @@
         self.payWay = [NSDictionary dictionaryWithDictionary:dict];
         self.selectedIndex = indexPath;
         [self.tableView reloadData];
-//        [self getPreparePayOrderPayWay:dict];
+        //        [self getPreparePayOrderPayWay:dict];
     }
     
 }
@@ -980,5 +967,7 @@
 {
     return [RSAUtil decryptString:string privateKey:priviteKey];
 }
+
+
 
 @end

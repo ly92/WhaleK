@@ -23,6 +23,9 @@
 		B111A3021E67FF210081A3A5 /* NSString+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E21E67FE5B0081A3A5 /* NSString+WhaleHelper.m */; };
 		B1C83A401E6E47A300C95A90 /* WhalePayWayCell.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A3E1E6E47A300C95A90 /* WhalePayWayCell.m */; };
 		B1C83A411E6E4A5C00C95A90 /* WhalePayWayCell.h in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A3D1E6E47A300C95A90 /* WhalePayWayCell.h */; };
+		B1C83A4A1E6E628200C95A90 /* UIImageView+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A491E6E628200C95A90 /* UIImageView+WhaleHelper.m */; };
+		B1C83A4B1E6E628F00C95A90 /* UIImageView+WhaleHelper.h in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A481E6E628200C95A90 /* UIImageView+WhaleHelper.h */; };
+		B1C83A4C1E6E62B300C95A90 /* WhalePayWayCell.xib in CopyFiles */ = {isa = PBXBuildFile; fileRef = B1C83A3F1E6E47A300C95A90 /* WhalePayWayCell.xib */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -32,6 +35,7 @@
 			dstPath = "include/$(PRODUCT_NAME)";
 			dstSubfolderSpec = 16;
 			files = (
+				B1C83A4C1E6E62B300C95A90 /* WhalePayWayCell.xib in CopyFiles */,
 				B111A2FC1E67FECF0081A3A5 /* WhalePayViewController.h in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -151,6 +155,8 @@
 		B1C83A3D1E6E47A300C95A90 /* WhalePayWayCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WhalePayWayCell.h; sourceTree = "<group>"; };
 		B1C83A3E1E6E47A300C95A90 /* WhalePayWayCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WhalePayWayCell.m; sourceTree = "<group>"; };
 		B1C83A3F1E6E47A300C95A90 /* WhalePayWayCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = WhalePayWayCell.xib; sourceTree = "<group>"; };
+		B1C83A481E6E628200C95A90 /* UIImageView+WhaleHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImageView+WhaleHelper.h"; sourceTree = "<group>"; };
+		B1C83A491E6E628200C95A90 /* UIImageView+WhaleHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImageView+WhaleHelper.m"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -353,6 +359,8 @@
 				B111A2E01E67FE5B0081A3A5 /* NSDate+WhaleHelper.m */,
 				B111A2E11E67FE5B0081A3A5 /* NSString+WhaleHelper.h */,
 				B111A2E21E67FE5B0081A3A5 /* NSString+WhaleHelper.m */,
+				B1C83A481E6E628200C95A90 /* UIImageView+WhaleHelper.h */,
+				B1C83A491E6E628200C95A90 /* UIImageView+WhaleHelper.m */,
 			);
 			path = Tools;
 			sourceTree = "<group>";
@@ -415,6 +423,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B1C83A4B1E6E628F00C95A90 /* UIImageView+WhaleHelper.h in Sources */,
 				B1C83A411E6E4A5C00C95A90 /* WhalePayWayCell.h in Sources */,
 				B1C83A401E6E47A300C95A90 /* WhalePayWayCell.m in Sources */,
 				B111A2FD1E67FF210081A3A5 /* NSString+Hash.h in Sources */,
@@ -426,6 +435,7 @@
 				B111A2FB1E67FEC10081A3A5 /* WhalePayViewController.m in Sources */,
 				B111A2F81E67FEB50081A3A5 /* ControllerActivity.h in Sources */,
 				B111A2F91E67FEB50081A3A5 /* MBProgressHUD.h in Sources */,
+				B1C83A4A1E6E628200C95A90 /* UIImageView+WhaleHelper.m in Sources */,
 				B111A2FA1E67FEB50081A3A5 /* libLHQPayCSH.a in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

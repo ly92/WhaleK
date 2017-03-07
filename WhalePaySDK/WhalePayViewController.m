@@ -17,6 +17,7 @@
 #import "Base64Data.h"
 #import "SecKeyWrapper.h"
 #import "RSAUtil.h"
+#import "WhalePayWayCell.h"
 
 
 /**
@@ -38,7 +39,13 @@
 @end
 
 
-@interface WhalePayViewController ()
+
+@implementation WPReceiptType
+
+@end
+
+
+@interface WhalePayViewController ()<UITableViewDelegate,UITableViewDataSource>
 
 @property (strong, nonatomic) WPOrder *wpOrder;//
 @property (strong, nonatomic) NSDictionary *payWay;//选择的支付通道
@@ -55,6 +62,11 @@
 
 @property (strong, nonatomic) NSDictionary *payResult;//支付结果
 
+@property (strong, nonatomic) WPReceiptType *defaultReceiptType;//默认的收款通道
+
+@property (nonatomic, strong) NSIndexPath *selectedIndex;//选中的支付索引
+
+@property (strong, nonatomic) UITableView *tableView;//
 @end
 
 
@@ -70,12 +82,37 @@
     return _payWayList;
 }
 
+- (UITableView *)tableView{
+    if (!_tableView){
+        _tableView = [[UITableView alloc] initWithFrame:CGRectMake(0, 0, SCRREN_WIDTH, SCRREN_HEIGHT - 50) style:UITableViewStylePlain];
+    }
+    return _tableView;
+}
+
+- (void)viewWillAppear:(BOOL)animated{
+    [super viewWillAppear:animated];
+    
+    self.selectedIndex = [NSIndexPath indexPathForRow:0 inSection:0];
+    
+    //默认title
+    if (![self.navigationItem.title isNotNull]){
+        self.navigationItem.title = @"支付";
+    }
+
+}
+
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view, typically from a nib.
     
-    self.view.backgroundColor = RGBCOLOR(240, 240, 240);
+    self.tableView.backgroundColor = RGBCOLOR(240, 240, 240);
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+    [self.tableView registerNib:[UINib nibWithNibName:@"WhalePayWayCell" bundle:nil] forCellReuseIdentifier:@"WhalePayWayCell"];
+    self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+    [self.view addSubview:self.tableView];
+    //支付按钮
+    [self setupSureBtn];
     
     if (![self.bundleName isNotNull]){
         self.bundleName = @"LHQResources";
@@ -88,28 +125,10 @@
     [backBtn addTarget:self action:@selector(dealPayResult) forControlEvents:UIControlEventTouchUpInside];
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithCustomView:backBtn];
     
-    //默认title
-    if (![self.navigationItem.title isNotNull]){
-        self.navigationItem.title = @"支付";
-    }
-    
     
 }
-
-- (void)dealPayResult{
-    if (self.payResult == nil || self.payResult.allKeys.count == 0){
-        self.payResult = @{
-                           @"code" : @"1000",
-                           @"message" : @"客户取消操作"
-                           };
-    }
-    
-    self.akCompletionBlock(self.payResult);
-    
-    [self.navigationController popViewControllerAnimated:YES];
-}
-
-- (void)setupTableHeadView:(WPOrder *)wpOrder{
+#pragma mark - 设置页面布局
+- (void)setupTableHeadViewWithName:(NSString *)name Money:(NSString *)money Content:(NSString *)content{
     
     UIView *tableheadView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, SCRREN_WIDTH, 160)];
     tableheadView.backgroundColor = RGBCOLOR(240, 240, 240);
@@ -128,30 +147,31 @@
     
     //支付金额
     UILabel *lbl2 = [[UILabel alloc] initWithFrame:CGRectMake(0, 35, SCRREN_WIDTH, 40)];
-    lbl2.text = [NSString stringWithFormat:@"%@元",wpOrder.money];
+    lbl2.text = [NSString stringWithFormat:@"%@元",money];
     lbl2.textAlignment = NSTextAlignmentCenter;
     lbl2.textColor = [UIColor blackColor];
     lbl2.font = [UIFont systemFontOfSize:30.0];
     [subView addSubview:lbl2];
     
-    //订单金额标题
+    //支付类型标题
     UILabel *lbl3 = [[UILabel alloc] initWithFrame:CGRectMake(10, 90, 80, 21)];
-    lbl3.text = @"订单金额";
+    lbl3.text = @"支付类型";
     lbl3.textAlignment = NSTextAlignmentLeft;
     lbl3.textColor = RGBCOLOR(183, 183, 183);
     lbl3.font = [UIFont systemFontOfSize:14.0];
     [subView addSubview:lbl3];
     
-    //订单金额内容
+    //支付类型内容
     UILabel *lbl4 = [[UILabel alloc] initWithFrame:CGRectMake(100, 90, SCRREN_WIDTH - 110, 21)];
-    lbl4.text = [NSString stringWithFormat:@"%@元",wpOrder.money];
+    lbl4.text = [NSString stringWithFormat:@"%@",name];
     lbl4.textAlignment = NSTextAlignmentRight;
     lbl4.textColor = RGBCOLOR(183, 183, 183);
     lbl4.font = [UIFont systemFontOfSize:14.0];
     [subView addSubview:lbl4];
     
+    
     //产品信息标题
-    UILabel *lbl5 = [[UILabel alloc] initWithFrame:CGRectMake(10, 111, 80, 21)];
+    UILabel *lbl5 = [[UILabel alloc] initWithFrame:CGRectMake(10, 110, 80, 21)];
     lbl5.text = @"产品信息";
     lbl5.textAlignment = NSTextAlignmentLeft;
     lbl5.textColor = RGBCOLOR(183, 183, 183);
@@ -159,15 +179,43 @@
     [subView addSubview:lbl5];
     
     //产品信息内容
-    UILabel *lbl6 = [[UILabel alloc] initWithFrame:CGRectMake(100, 111, SCRREN_WIDTH - 110, 21)];
-    lbl6.text = wpOrder.content;
+    UILabel *lbl6 = [[UILabel alloc] initWithFrame:CGRectMake(100, 110, SCRREN_WIDTH - 110, 21)];
+    lbl6.text = self.wpOrder.content;
     lbl6.textAlignment = NSTextAlignmentRight;
     lbl6.textColor = RGBCOLOR(183, 183, 183);
     lbl6.font = [UIFont systemFontOfSize:14.0];
     [subView addSubview:lbl6];
     
     self.tableView.tableHeaderView = tableheadView;
+    
 }
+
+- (void)setupSureBtn{
+    
+    UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(0, SCRREN_HEIGHT - 50, SCRREN_WIDTH, 50)];
+    [btn setTitle:@"立即支付" forState:UIControlStateNormal];
+    btn.backgroundColor = RGBCOLOR(33, 143, 230);
+    [btn setTintColor:[UIColor whiteColor]];
+    
+    [btn addTarget:self action:@selector(getPreparePayOrderPayWay) forControlEvents:UIControlEventTouchUpInside];
+    
+    [self.view addSubview:btn];
+}
+
+#pragma mark - 返回支付结果
+- (void)dealPayResult{
+    if (self.payResult == nil || self.payResult.allKeys.count == 0){
+        self.payResult = @{
+                           @"code" : @"1000",
+                           @"message" : @"客户取消操作"
+                           };
+    }
+    
+    self.akCompletionBlock(self.payResult);
+    
+    [self.navigationController popViewControllerAnimated:YES];
+}
+
 
 
 /**
@@ -205,18 +253,30 @@
 
 //1.检测必要条件
 - (BOOL)checkRequireParams:(WPOrder *)wpOrder{
-    if ([wpOrder.pno isNotNull] && [wpOrder.cno isNotNull] && [wpOrder.money isNotNull] && [wpOrder.orderno isNotNull] && [wpOrder.content isNotNull] && [wpOrder.userId isNotNull]){
+    if ([wpOrder.pno isNotNull] && [wpOrder.cno isNotNull] && [wpOrder.orderno isNotNull] && [wpOrder.content isNotNull] && [wpOrder.userId isNotNull]){
+        
+        //判断收款账号
+        if (wpOrder.receiptArray.count == 0){
+            return NO;
+        }else{
+            for (WPReceiptType *receiptType in wpOrder.receiptArray) {
+                if ([receiptType.isDefault integerValue] == 1){
+                    //保存默认信息
+                    self.defaultReceiptType = receiptType;
+                }
+            }
+        }
         
         //判断支持的支付通道
-        if (wpOrder.destArray.count == 0){
+        if (wpOrder.payTypeArray.count == 0){
             return NO;
         }
         
-        //显示支付信息
-        [self setupTableHeadView:wpOrder];
-        
         self.wpOrder = wpOrder;
         
+        self.wpOrder.fixedorgmoney = wpOrder.fixedorgmoney ? wpOrder.fixedorgmoney : @"0";
+        self.wpOrder.destsubaccount = wpOrder.destsubaccount ? wpOrder.destsubaccount : [NSDictionary dictionary];
+        self.wpOrder.orgsubaccount = wpOrder.orgsubaccount ? wpOrder.orgsubaccount : [NSDictionary dictionary];
         self.wpOrder.detail = wpOrder.detail ? wpOrder.detail : @"";
         self.wpOrder.starttime = wpOrder.starttime ? wpOrder.starttime : @"";
         self.wpOrder.stoptime = wpOrder.stoptime ? wpOrder.stoptime : @"";
@@ -359,7 +419,7 @@
                 if (from == 1){
                     [self getPayWay:wpOrder];
                 }else if (from == 2){
-                    [self getPreparePayOrderPayWay:self.payWay];
+                    [self getPreparePayOrderPayWay];
                 }
                 
             }else{
@@ -423,19 +483,36 @@
                 [self.payWayList removeAllObjects];
                 NSArray *list = [content objectForKey:@"list"];
                 
-#warning ----------- TODO 暂时仅支持双乾支付
-                for (NSDictionary *dict1 in list) {
-                    for (NSDictionary *dict2 in wpOrder.destArray) {
-                        if ([[dict1 objectForKey:@"atid"] integerValue] == [[dict2 objectForKey:@"atid"] integerValue]){
-                            [self.payWayList addObject:dict1];
+                
+                for (NSDictionary *dict in list) {
+                    if ([[dict objectForKey:@"ctype"] integerValue] == 1){
+                        //第三支付渠道
+                        //默认收款为地方饭票
+                        for (WPReceiptType *receipt in wpOrder.receiptArray) {
+                            if ([[dict objectForKey:@"atid"] integerValue] == [receipt.atid integerValue]){
+                                [self.payWayList addObject:dict];
+                            }
+                        }
+                    }else if ([[dict objectForKey:@"ctype"] integerValue] == 4){
+                        if (self.defaultReceiptType != nil && [self.defaultReceiptType.type isEqualToString:@"fanpiao"]){
+                            //默认收款为全国饭票
+                            for (NSNumber *atid in wpOrder.payTypeArray) {
+                                if ([[dict objectForKey:@"atid"] integerValue] == [atid integerValue]){
+                                    [self.payWayList addObject:dict];
+                                }
+                            }
+                        }else{
+                            //默认收款为地方饭票
+                            for (WPReceiptType *receipt in wpOrder.receiptArray) {
+                                if ([[dict objectForKey:@"atid"] integerValue] == [receipt.atid integerValue]){
+                                    [self.payWayList addObject:dict];
+                                }
+                            }
                         }
                     }
                 }
-                //                for (NSDictionary *dict1 in list) {
-                //                        if ([[dict1 objectForKey:@"atid"] integerValue] == 31){
-                //                            [self.payWayList addObject:dict1];
-                //                        }
-                //                }
+                
+                
                 
                 if (self.payWayList.count > 1){
                     //支付方式列表
@@ -444,9 +521,8 @@
                 }else if (self.payWayList.count == 1){
                     //只有一种支付方式
                     self.payWay = [NSDictionary dictionaryWithDictionary:self.payWayList[0]];
-                    [self getPreparePayOrderPayWay:self.payWayList[0]];
+                    [self getPreparePayOrderPayWay];
                     //支付方式列表
-                    //                    [self.tableView reloadData];
                     [MBProgressHUD hideHUDForView:self.view animated:YES];
                 }else{
                     //无支付方式可用
@@ -472,21 +548,90 @@
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath{
     
-    static NSString *cellID = @"AKPayWayCell";
+    static NSString *cellID = @"WhalePayWayCell";
     
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
-    if (!cell){
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cellID];
-        UIView *line  = [[UIView alloc] initWithFrame:CGRectMake(0, 43, [UIScreen mainScreen].bounds.size.width, 1)];
-        line.backgroundColor = RGBCOLOR(240, 240, 240);;
-        [cell addSubview:line];
-    }
-    
+    WhalePayWayCell *cell = [tableView dequeueReusableCellWithIdentifier:cellID];
     
     if (self.payWayList.count > indexPath.row){
         NSDictionary *dict = self.payWayList[indexPath.row];
-        cell.textLabel.text = [dict objectForKey:@"name"];
-        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        cell.nameLbl.text = [dict objectForKey:@"name"];
+        cell.infoLbl.text = @"";
+        cell.moneyLbl.text = @"";
+        
+        NSString *ctype = [dict objectForKey:@"ctype"];
+        NSString *type = [[dict objectForKey:@"type"] trim];
+        NSString * path = [[NSBundle mainBundle] pathForResource:self.bundleName ofType:@"bundle"];
+        
+        if ([ctype integerValue] == 1){
+            //第三方支付
+            UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"sanfang"]];
+            img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+            cell.iconImgV.image = img;
+
+            
+            for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+                if ([type isEqualToString:@"alipay"] && [receipt.type isEqualToString:@"alipay"]){
+                    //支付宝
+                    cell.moneyLbl.text = receipt.money;
+                    cell.infoLbl.text = receipt.info;
+                }else if ([type isEqualToString:@"weixin"] && [receipt.type isEqualToString:@"weixin"]){
+                    //微信
+                    cell.moneyLbl.text = receipt.money;
+                    cell.infoLbl.text = receipt.info;
+                }else if ([type isEqualToString:@"lhq"] && [receipt.type isEqualToString:@"lhq"]){
+                    //邻花钱
+                    cell.moneyLbl.text = receipt.money;
+                    cell.infoLbl.text = receipt.info;
+                }else{
+                    //其他
+                }
+            }
+        }else if([ctype integerValue] == 4){
+            //虚拟货币支付
+            
+            if ([[dict objectForKey:@"type"] isEqualToString:@"fanpiao"]){
+                UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"fanpiao"]];
+                img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+                cell.iconImgV.image = img;
+            }else{
+                UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"lfanpiao"]];
+                img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+                cell.iconImgV.image = img;
+            }
+            
+            BOOL needChange = YES;
+            for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+                if ([receipt.atid integerValue] == [[dict objectForKey:@"atid"] integerValue]){
+                    cell.moneyLbl.text = receipt.money;
+                    cell.infoLbl.text = receipt.info;
+                    needChange = NO;
+                }
+            }
+            //按照汇率转换
+            if (needChange){
+                CGFloat moneyF = [self.defaultReceiptType.money floatValue] / [[dict objectForKey:@"rate"] floatValue];
+                cell.moneyLbl.text = [NSString stringWithFormat:@"%.2f",moneyF];
+            }
+        }else{
+        }
+        
+        
+        
+        if (self.selectedIndex.row == indexPath.row){
+            UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"choose_blue.png"]];
+            img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+            [cell.selectedBtn setImage:img forState:UIControlStateNormal];
+            self.payWay = dict;
+            
+            //显示支付信息
+            [self setupTableHeadViewWithName:cell.nameLbl.text Money:cell.moneyLbl.text Content:cell.infoLbl.text];
+            
+        }else{
+            UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"choose_gray"]];
+            img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
+            [cell.selectedBtn setImage:img forState:UIControlStateNormal];
+        }
+
     }
     
     return cell;
@@ -494,7 +639,7 @@
 
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath{
     
-    return 44;
+    return 60;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
@@ -502,51 +647,151 @@
     if (self.payWayList.count > indexPath.row){
         NSDictionary *dict = self.payWayList[indexPath.row];
         self.payWay = [NSDictionary dictionaryWithDictionary:dict];
-        [self getPreparePayOrderPayWay:dict];
+        self.selectedIndex = indexPath;
+        [self.tableView reloadData];
+//        [self getPreparePayOrderPayWay:dict];
     }
     
 }
 
 
 #pragma mark - 获取预支付订单
-- (void)getPreparePayOrderPayWay:(NSDictionary *)payWay{
+- (void)getPreparePayOrderPayWay{
     //判断token是否失效
     if (![self isLocalTokenCanUse]){
         [self getToken:self.wpOrder from:2];
         return;
     }
     
-    NSString *atid = [payWay objectForKey:@"atid"];
+    NSString *atid = [self.payWay objectForKey:@"atid"];
+    NSString *ctype = [self.payWay objectForKey:@"ctype"];
+    NSString *type = [[self.payWay objectForKey:@"type"] trim];
     
     NSString *orgtype;
     NSString *orgaccountno;
     NSString *desttype;
     NSString *destaccountno;
     
-    if ([atid integerValue] == 4 || [atid integerValue] == 5 || [atid integerValue] == 31){
-        //第三方支付（微信，支付宝，双乾），dict为收款方信息
+    NSString *money = @"0";
+    
+    if ([ctype integerValue] == 1){
+        //第三方支付
         orgtype = @"0";
         orgaccountno = @"0";
-        desttype = atid;
-        destaccountno = [payWay objectForKey:@"pano"];
-    }else{
-        //非第三方支付，dict为付款方信息
-        orgtype = atid;
-        orgaccountno = [payWay objectForKey:@"cano"];
-        for (NSDictionary *dic in self.wpOrder.destArray) {
-            if ([[dic objectForKey:@"atid"] integerValue] == [atid integerValue]){
-                destaccountno = [dic objectForKey:@"pano"];
+        
+        for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+            if ([type isEqualToString:@"alipay"] && [receipt.type isEqualToString:@"alipay"]){
+                //支付宝
+                money = receipt.money;
+                desttype = receipt.atid;
+                destaccountno = receipt.ano;
+            }else if ([type isEqualToString:@"weixin"] && [receipt.type isEqualToString:@"weixin"]){
+                //微信
+                money = receipt.money;
+                desttype = receipt.atid;
+                destaccountno = receipt.ano;
+            }else if ([type isEqualToString:@"lhq"] && [receipt.type isEqualToString:@"lhq"]){
+                //邻花钱
+                money = receipt.money;
+                desttype = receipt.atid;
+                destaccountno = receipt.ano;
+            }else{
+                //其他
             }
         }
-        desttype = atid;
+    }else if([ctype integerValue] == 4){
+        //虚拟货币支付
+        
+        orgtype = atid;
+        orgaccountno = [self.payWay objectForKey:@"cano"];
+        
+        BOOL needChange = YES;
+        for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+            if ([receipt.atid integerValue] == [atid integerValue]){
+                desttype = receipt.atid;
+                destaccountno = receipt.ano;
+                money = receipt.money;
+                needChange = NO;
+            }
+        }
+        //按照汇率转换
+        if (needChange){
+            CGFloat moneyF = [self.defaultReceiptType.money floatValue] / [[self.payWay objectForKey:@"rate"] floatValue];
+            money = [NSString stringWithFormat:@"%.2f",moneyF];
+            desttype = self.defaultReceiptType.atid;
+            destaccountno = self.defaultReceiptType.ano;
+        }
+        
+        
+        //        if ([type isEqualToString:@"fanpiao"]){
+        //            //全国饭票
+        //
+        //            BOOL needChange = YES;
+        //            for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+        //                if ([receipt.atid integerValue] == [atid integerValue]){
+        //                    money = receipt.money;
+        //                    needChange = NO;
+        //                }
+        //            }
+        //            //按照汇率转换
+        //            if (needChange){
+        //                CGFloat moneyF = [self.defaultReceiptType.money floatValue] / [[payWay objectForKey:@"rate"] floatValue];
+        //                money = [NSString stringWithFormat:@"%.2f",moneyF];
+        //            }
+        //        }else if ([type isEqualToString:@"lfanpiao"]){
+        //            //地方饭票
+        //            BOOL needChange = YES;
+        //            for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+        //                if ([receipt.atid integerValue] == [atid integerValue]){
+        //                    money = receipt.money;
+        //                    needChange = NO;
+        //                }
+        //            }
+        //            //按照汇率转换
+        //            if (needChange){
+        //                CGFloat moneyF = [self.defaultReceiptType.money floatValue] / [[payWay objectForKey:@"rate"] floatValue];
+        //                money = [NSString stringWithFormat:@"%.2f",moneyF];
+        //            }
+    }else{
+        
     }
+    
+    //    if ([atid integerValue] == 4 || [atid integerValue] == 5 || [atid integerValue] == 31){
+    //        //第三方支付（微信，支付宝，双乾），dict为收款方信息
+    //        orgtype = @"0";
+    //        orgaccountno = @"0";
+    //        desttype = atid;
+    //        destaccountno = [payWay objectForKey:@"pano"];
+    //        money = @"100";
+    //    }else{
+    //        //非第三方支付，dict为付款方信息
+    //        orgtype = atid;
+    //        orgaccountno = [payWay objectForKey:@"cano"];
+    //
+    //        BOOL needChange = YES;
+    //        for (WPReceiptType *receipt in self.wpOrder.receiptArray) {
+    //            if ([receipt.atid integerValue] == [atid integerValue]){
+    //                desttype = atid;
+    //                destaccountno = receipt.ano;
+    //                money = receipt.money;
+    //                needChange = NO;
+    //            }
+    //        }
+    //        //按照汇率转换
+    //        if (needChange){
+    //            CGFloat moneyF = [self.defaultReceiptType.money floatValue] / [[payWay objectForKey:@"rate"] floatValue];
+    //            money = [NSString stringWithFormat:@"%0.2f",moneyF];
+    //            desttype = self.defaultReceiptType.atid;
+    //            destaccountno = self.defaultReceiptType.ano;
+    //        }
+    //    }
     
     
     
     NSURL* url = [NSURL URLWithString:[NSString stringWithFormat:@"%@%@",PrePayUrl,self.access_token]];
     NSMutableURLRequest * postRequest=[NSMutableURLRequest requestWithURL:url];
     NSDictionary* dict = @{
-                           @"money"  : self.wpOrder.money,
+                           @"money"  : money,
                            @"orderno"  : self.wpOrder.orderno,
                            @"content"  : self.wpOrder.content,
                            @"orgtype"  : orgtype,
@@ -557,7 +802,10 @@
                            @"starttime"  : self.wpOrder.starttime,
                            @"stoptime"  : self.wpOrder.stoptime,
                            @"callback"  : self.wpOrder.callback,
-                           @"remoteip"  : self.wpOrder.remoteip
+                           @"remoteip"  : self.wpOrder.remoteip,
+                           @"fixedorgmoney" : self.wpOrder.fixedorgmoney,
+                           @"orgsubaccount" : [NSString dictionaryToJson:self.wpOrder.orgsubaccount],
+                           @"destsubaccount" : [NSString dictionaryToJson:self.wpOrder.destsubaccount]
                            };
     NSData* data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
     NSString *bodyData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -577,7 +825,7 @@
                     NSDictionary *payinfo = [content objectForKey:@"payinfo"];
                     if (payinfo != nil && payinfo.allKeys.count > 0){
                         //支付订单
-                        [self payAction:payinfo];
+                        [self payAction:payinfo Money:money];
                     }else{
                         [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
                     }
@@ -593,7 +841,7 @@
 }
 
 
-- (void)payAction:(NSDictionary *)payInfo{
+- (void)payAction:(NSDictionary *)payInfo Money:(NSString *)money{
     NSString *payType = [[payInfo objectForKey:@"paytype"] trim];
     
     if ([payType isEqualToString:@"weixin"]){
@@ -604,7 +852,7 @@
         [self aliPayAction:payInfo];
     }else if ([payType isEqualToString:@"lhq"]){
         //双乾支付
-        [self lhqPayAction:payInfo];
+        [self lhqPayAction:payInfo Money:money];
     }else if ([payType isEqualToString:@"fanpiao"]){
         //全国饭票支付
         [self fanpiaoPayAction:payInfo];
@@ -629,15 +877,16 @@
 }
 
 //双乾支付
-- (void)lhqPayAction:(NSDictionary *)payInfo{
+- (void)lhqPayAction:(NSDictionary *)payInfo Money:(NSString *)money{
     NSString *merNo = [payInfo objectForKey:@"merNo"];
     NSString *tno = [payInfo objectForKey:@"tno"];
+    
     NSDictionary *dic = @{
                           @"userNo" : [NSString stringWithFormat:@"%@%@%@",merNo,self.wpOrder.pno,self.wpOrder.userId],                         // 用户编号
                           @"merNo" : merNo,                   // 商户编号
                           @"mobile" : self.wpOrder.mobile,                // 用户手机号
                           @"orderNum" : tno,      // 交易订单号
-                          @"amount" : self.wpOrder.money,                        // 产生的交易金额
+                          @"amount" : money,                        // 产生的交易金额
                           @"orderType" :@"CJ01",                       // 支付方式
                           @"goods_desc" : self.wpOrder.content,  // 商品说明
                           @"goods_name" : self.wpOrder.content,                    //商品名称

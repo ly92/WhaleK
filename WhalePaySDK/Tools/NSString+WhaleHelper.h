@@ -16,4 +16,6 @@
 - (NSString*)trim;
 
 - (BOOL)isNotNull;
+
++ (NSString*)dictionaryToJson:(NSDictionary *)dic;
 @end

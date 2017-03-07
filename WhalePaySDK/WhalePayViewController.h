@@ -56,24 +56,47 @@ return __singleton__; \
  */
 typedef void (^AKPayCompletion)(NSDictionary *result);
 
+//收款账号信息
+@interface WPReceiptType : NSObject
+@property (copy, nonatomic) NSString *atid;//收款通道类型
+@property (copy, nonatomic) NSString *name;//收款通道名称
+@property (copy, nonatomic) NSString *ano;//收款帐号编号
+@property (copy, nonatomic) NSString *money;//此收款通道应收金额
+@property (copy, nonatomic) NSString *info;//附加信息
+@property (copy, nonatomic) NSString *isDefault;//是否为默认收款账号
+@property (copy, nonatomic) NSString *ctype;//通道类型 1:第三方通道  4:虚拟货币通道
+@property (copy, nonatomic) NSString *type;//饭票类型 fanpiao：全国饭票   lfanpiao：地方饭票
+@end
+
 @interface WPOrder : NSObject
 //require  正常使用支付功能必须输入的信息
 @property (nonatomic, copy) NSString *pno;//平台账号（本app相对于奥科公司对应的ID号）
 @property (copy, nonatomic) NSString *cno;//用户针对金融平台中当前应用的身份
 /**
  获取的支付方式存在于此数组中才可以显示，微信支付宝双乾的pano为0，其他支付方式值为收款帐号编号
- key         value
- atid        支付通道类型
- pano        收款帐号编号
  */
-@property (strong, nonatomic) NSArray<NSDictionary *> *destArray;//
-@property (copy, nonatomic) NSString *money;//交易金额的总数
+@property (strong, nonatomic) NSArray<NSNumber *> *payTypeArray;//app支持的支付通道
+/**
+ 获取的支付方式存在于此数组中才可以显示，微信支付宝双乾的pano为0，其他支付方式值为收款帐号编号
+ */
+@property (strong, nonatomic) NSArray<WPReceiptType *> *receiptArray;//app提供的收款通道
+
 @property (copy, nonatomic) NSString *orderno;//接入方生成的订单编号
 @property (nonatomic, copy) NSString *content;//交易说明（显示给用户的内容）
 @property (copy, nonatomic) NSString *userId;//本app里面当前用户对应的ID号
 
 
 //option   可选的信息
+/*
+ 下面两个属性---保留字段
+ */
+@property (strong, nonatomic) NSDictionary *orgsubaccount;//支付账号子账号修改信息
+@property (strong, nonatomic) NSDictionary *destsubaccount;//收款账号子账号修改信息
+/*
+ 当发生跨币种汇兑交易时，金融平台会自动根据汇率计算交易金额。转账时一般需要固定支付金额，避免多扣款；消费时一般不固定，确保收款正确。
+ */
+@property (copy, nonatomic) NSString *fixedorgmoney;//支付金额固定，0不固定，1固定
+
 @property (copy, nonatomic) NSString *detail;//交易明细
 @property (nonatomic, copy) NSString *starttime;//交易生效时间
 @property (nonatomic, copy) NSString *stoptime;//交易失效时间
@@ -89,7 +112,8 @@ typedef void (^AKPayCompletion)(NSDictionary *result);
 @end
 
 
-@interface WhalePayViewController : UITableViewController
+
+@interface WhalePayViewController : UIViewController
 
 //资源文件名称
 @property (copy, nonatomic) NSString *bundleName;//

@@ -68,6 +68,7 @@
 @property (nonatomic, strong) NSIndexPath *selectedIndex;//选中的支付索引
 
 @property (strong, nonatomic) UITableView *tableView;//
+@property (strong, nonatomic) UIButton *payBtn;//支付按钮
 @end
 
 
@@ -90,10 +91,29 @@
     return _tableView;
 }
 
+- (UIButton *)payBtn{
+    if (!_payBtn){
+        _payBtn = [[UIButton alloc] initWithFrame:CGRectMake(0, SCRREN_HEIGHT - 50, SCRREN_WIDTH, 50)];
+        [_payBtn setTitle:@"立即支付" forState:UIControlStateNormal];
+        _payBtn.backgroundColor = RGBCOLOR(33, 143, 230);
+        [_payBtn setTintColor:[UIColor whiteColor]];
+        
+        [_payBtn addTarget:self action:@selector(getPreparePayOrderPayWay) forControlEvents:UIControlEventTouchUpInside];
+        
+        [self.view addSubview:_payBtn];
+    }
+    return _payBtn;
+}
+
 - (void)viewWillAppear:(BOOL)animated{
     [super viewWillAppear:animated];
     
     self.selectedIndex = [NSIndexPath indexPathForRow:0 inSection:0];
+    //制造空页面
+    [self.payWayList removeAllObjects];
+    [self.tableView reloadData];
+    self.tableView.tableHeaderView = nil;
+    self.payBtn.hidden = YES;
     
     //默认title
     if (![self.navigationItem.title isNotNull]){
@@ -107,13 +127,12 @@
     // Do any additional setup after loading the view, typically from a nib.
     
     self.tableView.backgroundColor = RGBCOLOR(240, 240, 240);
+    self.view.backgroundColor = RGBCOLOR(240, 240, 240);
     self.tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
     [self.tableView registerNib:[UINib nibWithNibName:@"WhalePayWayCell" bundle:nil] forCellReuseIdentifier:@"WhalePayWayCell"];
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     [self.view addSubview:self.tableView];
-    //支付按钮
-    [self setupSureBtn];
     
     if (![self.bundleName isNotNull]){
         self.bundleName = @"LHQResources";
@@ -191,17 +210,6 @@
     
 }
 
-- (void)setupSureBtn{
-    
-    UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(0, SCRREN_HEIGHT - 50, SCRREN_WIDTH, 50)];
-    [btn setTitle:@"立即支付" forState:UIControlStateNormal];
-    btn.backgroundColor = RGBCOLOR(33, 143, 230);
-    [btn setTintColor:[UIColor whiteColor]];
-    
-    [btn addTarget:self action:@selector(getPreparePayOrderPayWay) forControlEvents:UIControlEventTouchUpInside];
-    
-    [self.view addSubview:btn];
-}
 
 #pragma mark - 返回支付结果
 - (void)dealPayResult{
@@ -245,10 +253,10 @@
             //5.保存回调代码
             self.akCompletionBlock = completion;
         }else{
-            [MBProgressHUD showError:@"请补全必要参数" toView:viewController.view];
+            [MBProgressHUD showMessage:@"请补全必要参数" toView:viewController.view];
         }
     }else{
-        [MBProgressHUD showError:@"注册ID失败" toView:viewController.view];
+        [MBProgressHUD showMessage:@"注册ID失败" toView:viewController.view];
     }
 }
 
@@ -368,37 +376,37 @@
             NSHTTPURLResponse* httpResponse = (NSHTTPURLResponse*)response;
             if (httpResponse.statusCode == 2001) {
                 NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
-                [MBProgressHUD showError:@"缺少key" toView:self.view];
+                [MBProgressHUD showMessage:@"缺少key" toView:self.view];
                 return;
             }
             if (httpResponse.statusCode == 2002) {
                 NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
-                [MBProgressHUD showError:@"缺少时间戳" toView:self.view];
+                [MBProgressHUD showMessage:@"缺少时间戳" toView:self.view];
                 return;
             }
             if (httpResponse.statusCode == 2003) {
                 NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
-                [MBProgressHUD showError:@"无效的时间戳，时间戳与当前时间误差超过20分钟" toView:self.view];
+                [MBProgressHUD showMessage:@"无效的时间戳，时间戳与当前时间误差超过20分钟" toView:self.view];
                 return;
             }
             if (httpResponse.statusCode == 2004) {
                 NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
-                [MBProgressHUD showError:@"缺少签名" toView:self.view];
+                [MBProgressHUD showMessage:@"缺少签名" toView:self.view];
                 return;
             }
             if (httpResponse.statusCode == 2005) {
                 NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
-                [MBProgressHUD showError:@"验证失败，请确认appkey和appsecret" toView:self.view];
+                [MBProgressHUD showMessage:@"验证失败，请确认appkey和appsecret" toView:self.view];
                 return;
             }
             if (httpResponse.statusCode == 2006) {
                 NSLog(@"statusCode=%ld error = %@", (long)httpResponse.statusCode, connectionError);
-                [MBProgressHUD showError:@"应用不存在,请联系奥科管理员" toView:self.view];
+                [MBProgressHUD showMessage:@"应用不存在,请联系奥科管理员" toView:self.view];
                 return;
             }
             if (connectionError != nil) {
                 NSLog(@"error = %@", connectionError);
-                [MBProgressHUD showError:[NSString stringWithFormat:@"%@",connectionError] toView:self.view];
+                [MBProgressHUD showMessage:[NSString stringWithFormat:@"%@",connectionError] toView:self.view];
                 return;
             }
             
@@ -411,7 +419,7 @@
                 self.expire = [NSString stringWithFormat:@"%@",expire];
                 
                 if (![self.access_token isNotNull] || ![self.expire isNotNull]){
-                    [MBProgressHUD showError:@"鉴权失败，请重新尝试" toView:self.view];
+                    [MBProgressHUD showMessage:@"鉴权失败，请重新尝试" toView:self.view];
                     NSLog(@"获取token失败");
                     [self.navigationController popViewControllerAnimated:YES];
                     return;
@@ -424,7 +432,7 @@
                 }
                 
             }else{
-                [MBProgressHUD showError:@"鉴权失败，请重新尝试" toView:self.view];
+                [MBProgressHUD showMessage:@"鉴权失败，请重新尝试" toView:self.view];
                 [self.navigationController popViewControllerAnimated:YES];
             }
             
@@ -527,12 +535,12 @@
                     [MBProgressHUD hideHUDForView:self.view animated:YES];
                 }else{
                     //无支付方式可用
-                    [MBProgressHUD showError:@"无支付方式可用,请联系奥科管理员" toView:self.view];
+                    [MBProgressHUD showMessage:@"无支付方式可用,请联系奥科管理员" toView:self.view];
                     [self.navigationController popViewControllerAnimated:YES];
                 }
             }else{
                 //加载失败
-                [MBProgressHUD showError:@"获取支付方式失败，请重新尝试" toView:self.view];
+                [MBProgressHUD showMessage:@"获取支付方式失败，请重新尝试" toView:self.view];
                 [self.navigationController popViewControllerAnimated:YES];
             }
         });
@@ -612,7 +620,8 @@
             
             //显示支付信息
             [self setupTableHeadViewWithName:cell.nameLbl.text Money:cell.moneyLbl.text Content:cell.infoLbl.text];
-            
+            //显示支付按钮
+            self.payBtn.hidden = NO;
         }else{
             UIImage *img = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"choose_gray"]];
             img = [img imageWithRenderingMode:UIImageRenderingModeAlwaysOriginal];
@@ -636,7 +645,6 @@
         self.payWay = [NSDictionary dictionaryWithDictionary:dict];
         self.selectedIndex = indexPath;
         [self.tableView reloadData];
-        //        [self getPreparePayOrderPayWay:dict];
     }
     
 }
@@ -814,13 +822,13 @@
                         //支付订单
                         [self payAction:payinfo Money:money];
                     }else{
-                        [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
+                        [MBProgressHUD showMessage:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
                     }
                 }else{
-                    [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
+                    [MBProgressHUD showMessage:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
                 }
             }else{
-                [MBProgressHUD showError:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
+                [MBProgressHUD showMessage:[NSString stringWithFormat:@"%@",[result objectForKey:@"message"]] toView:self.view];
             }
             
         });
@@ -847,7 +855,7 @@
         //地方饭票支付
         [self lfanpaioPayAction:payInfo];
     }else{
-        [MBProgressHUD showError:@"未知支付方式" toView:self.view];
+        [MBProgressHUD showMessage:@"未知支付方式" toView:self.view];
     }
 }
 

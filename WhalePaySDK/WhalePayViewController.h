@@ -96,12 +96,15 @@ typedef void (^AKPayCompletion)(NSDictionary *result);
  当发生跨币种汇兑交易时，金融平台会自动根据汇率计算交易金额。转账时一般需要固定支付金额，避免多扣款；消费时一般不固定，确保收款正确。
  */
 @property (copy, nonatomic) NSString *fixedorgmoney;//支付金额固定，0不固定，1固定
+/*
+ 需要使用微信支付的时候必填写此参数
+ */
+@property (nonatomic, copy) NSString *remoteip;//调用方ip地址
 
 @property (copy, nonatomic) NSString *detail;//交易明细
 @property (nonatomic, copy) NSString *starttime;//交易生效时间
 @property (nonatomic, copy) NSString *stoptime;//交易失效时间
 @property (nonatomic, copy) NSString *callback;//业务系统回调
-@property (nonatomic, copy) NSString *remoteip;//调用方ip地址
 @property (copy, nonatomic) NSString *mobile;//本app里面当前用户的手机号
 @property (copy, nonatomic) NSString *userName;//本app里面当前用户对应的用户名
 @property (copy, nonatomic) NSString *city;//市

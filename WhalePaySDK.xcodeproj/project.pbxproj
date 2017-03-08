@@ -11,7 +11,6 @@
 		B111A2E61E67FE5B0081A3A5 /* libcrypto.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B111A2791E67FE5A0081A3A5 /* libcrypto.a */; };
 		B111A2E71E67FE5B0081A3A5 /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B111A27A1E67FE5A0081A3A5 /* libssl.a */; };
 		B111A2F81E67FEB50081A3A5 /* ControllerActivity.h in Sources */ = {isa = PBXBuildFile; fileRef = B111A2741E67FE5A0081A3A5 /* ControllerActivity.h */; };
-		B111A2F91E67FEB50081A3A5 /* MBProgressHUD.h in Sources */ = {isa = PBXBuildFile; fileRef = B111A2751E67FE5A0081A3A5 /* MBProgressHUD.h */; };
 		B111A2FA1E67FEB50081A3A5 /* libLHQPayCSH.a in Sources */ = {isa = PBXBuildFile; fileRef = B111A2771E67FE5A0081A3A5 /* libLHQPayCSH.a */; };
 		B111A2FB1E67FEC10081A3A5 /* WhalePayViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E41E67FE5B0081A3A5 /* WhalePayViewController.m */; };
 		B111A2FC1E67FECF0081A3A5 /* WhalePayViewController.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = B111A2E31E67FE5B0081A3A5 /* WhalePayViewController.h */; };
@@ -45,7 +44,6 @@
 /* Begin PBXFileReference section */
 		B111A2661E67FE0C0081A3A5 /* libWhalePaySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWhalePaySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		B111A2741E67FE5A0081A3A5 /* ControllerActivity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ControllerActivity.h; sourceTree = "<group>"; };
-		B111A2751E67FE5A0081A3A5 /* MBProgressHUD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBProgressHUD.h; sourceTree = "<group>"; };
 		B111A2771E67FE5A0081A3A5 /* libLHQPayCSH.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libLHQPayCSH.a; sourceTree = "<group>"; };
 		B111A2791E67FE5A0081A3A5 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
 		B111A27A1E67FE5A0081A3A5 /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libssl.a; sourceTree = "<group>"; };
@@ -216,7 +214,6 @@
 			isa = PBXGroup;
 			children = (
 				B111A2741E67FE5A0081A3A5 /* ControllerActivity.h */,
-				B111A2751E67FE5A0081A3A5 /* MBProgressHUD.h */,
 			);
 			path = LHQPay;
 			sourceTree = "<group>";
@@ -432,7 +429,6 @@
 				B111A3021E67FF210081A3A5 /* NSString+WhaleHelper.m in Sources */,
 				B111A2FB1E67FEC10081A3A5 /* WhalePayViewController.m in Sources */,
 				B111A2F81E67FEB50081A3A5 /* ControllerActivity.h in Sources */,
-				B111A2F91E67FEB50081A3A5 /* MBProgressHUD.h in Sources */,
 				B1C83A4A1E6E628200C95A90 /* UIImageView+WhaleHelper.m in Sources */,
 				B111A2FA1E67FEB50081A3A5 /* libLHQPayCSH.a in Sources */,
 			);

@@ -1,1055 +1,531 @@
 //
-// MBProgressHUD.m
-// Version 0.9.1
-// Created by Matej Bukovinski on 2.4.09.
+//  MBProgressHUD.h
+//  Version 0.9.1
+//  Created by Matej Bukovinski on 2.4.09.
 //
 
-#import "MBProgressHUD.h"
-#import <tgmath.h>
+// This code is distributed under the terms and conditions of the MIT license.
+
+// Copyright (c) 2009-2015 Matej Bukovinski
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#import <CoreGraphics/CoreGraphics.h>
+
+@protocol MBProgressHUDDelegate;
 
 
+typedef NS_ENUM(NSInteger, MBProgressHUDMode) {
+    /** Progress is shown using an UIActivityIndicatorView. This is the default. */
+    MBProgressHUDModeIndeterminate,
+    /** Progress is shown using a round, pie-chart like, progress view. */
+    MBProgressHUDModeDeterminate,
+    /** Progress is shown using a horizontal progress bar */
+    MBProgressHUDModeDeterminateHorizontalBar,
+    /** Progress is shown using a ring-shaped progress view. */
+    MBProgressHUDModeAnnularDeterminate,
+    /** Shows a custom view */
+    MBProgressHUDModeCustomView,
+    /** Shows only labels */
+    MBProgressHUDModeText
+};
+
+typedef NS_ENUM(NSInteger, MBProgressHUDAnimation) {
+    /** Opacity animation */
+    MBProgressHUDAnimationFade,
+    /** Opacity + scale animation */
+    MBProgressHUDAnimationZoom,
+    MBProgressHUDAnimationZoomOut = MBProgressHUDAnimationZoom,
+    MBProgressHUDAnimationZoomIn
+};
+
+
+#ifndef MB_INSTANCETYPE
+#if __has_feature(objc_instancetype)
+#define MB_INSTANCETYPE instancetype
+#else
+#define MB_INSTANCETYPE id
+#endif
+#endif
+
+#ifndef MB_STRONG
 #if __has_feature(objc_arc)
-#define MB_AUTORELEASE(exp) exp
-#define MB_RELEASE(exp) exp
-#define MB_RETAIN(exp) exp
+#define MB_STRONG strong
 #else
-#define MB_AUTORELEASE(exp) [exp autorelease]
-#define MB_RELEASE(exp) [exp release]
-#define MB_RETAIN(exp) [exp retain]
+#define MB_STRONG retain
+#endif
 #endif
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 60000
-#define MBLabelAlignmentCenter NSTextAlignmentCenter
+#ifndef MB_WEAK
+#if __has_feature(objc_arc_weak)
+#define MB_WEAK weak
+#elif __has_feature(objc_arc)
+#define MB_WEAK unsafe_unretained
 #else
-#define MBLabelAlignmentCenter UITextAlignmentCenter
+#define MB_WEAK assign
+#endif
 #endif
 
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 70000
-#define MB_TEXTSIZE(text, font) [text length] > 0 ? [text \
-sizeWithAttributes:@{NSFontAttributeName:font}] : CGSizeZero;
-#else
-#define MB_TEXTSIZE(text, font) [text length] > 0 ? [text sizeWithFont:font] : CGSizeZero;
-#endif
-
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 70000
-#define MB_MULTILINE_TEXTSIZE(text, font, maxSize, mode) [text length] > 0 ? [text \
-boundingRectWithSize:maxSize options:(NSStringDrawingUsesLineFragmentOrigin) \
-attributes:@{NSFontAttributeName:font} context:nil].size : CGSizeZero;
-#else
-#define MB_MULTILINE_TEXTSIZE(text, font, maxSize, mode) [text length] > 0 ? [text \
-sizeWithFont:font constrainedToSize:maxSize lineBreakMode:mode] : CGSizeZero;
-#endif
-
-#ifndef kCFCoreFoundationVersionNumber_iOS_7_0
-#define kCFCoreFoundationVersionNumber_iOS_7_0 847.20
-#endif
-
-#ifndef kCFCoreFoundationVersionNumber_iOS_8_0
-#define kCFCoreFoundationVersionNumber_iOS_8_0 1129.15
-#endif
-
-
-static const CGFloat kPadding = 4.f;
-static const CGFloat kLabelFontSize = 16.f;
-static const CGFloat kDetailsLabelFontSize = 12.f;
-
-
-@interface MBProgressHUD () {
-    BOOL useAnimation;
-    SEL methodForExecution;
-    id targetForExecution;
-    id objectForExecution;
-    UILabel *label;
-    UILabel *detailsLabel;
-    BOOL isFinished;
-    CGAffineTransform rotationTransform;
-}
-
-@property (atomic, MB_STRONG) UIView *indicator;
-@property (atomic, MB_STRONG) NSTimer *graceTimer;
-@property (atomic, MB_STRONG) NSTimer *minShowTimer;
-@property (atomic, MB_STRONG) NSDate *showStarted;
-
-@end
-
-
-@implementation MBProgressHUD
-
-#pragma mark - Properties
-
-@synthesize animationType;
-@synthesize delegate;
-@synthesize opacity;
-@synthesize color;
-@synthesize labelFont;
-@synthesize labelColor;
-@synthesize detailsLabelFont;
-@synthesize detailsLabelColor;
-@synthesize indicator;
-@synthesize xOffset;
-@synthesize yOffset;
-@synthesize minSize;
-@synthesize square;
-@synthesize margin;
-@synthesize dimBackground;
-@synthesize graceTime;
-@synthesize minShowTime;
-@synthesize graceTimer;
-@synthesize minShowTimer;
-@synthesize taskInProgress;
-@synthesize removeFromSuperViewOnHide;
-@synthesize customView;
-@synthesize showStarted;
-@synthesize mode;
-@synthesize labelText;
-@synthesize detailsLabelText;
-@synthesize progress;
-@synthesize size;
-@synthesize activityIndicatorColor;
 #if NS_BLOCKS_AVAILABLE
-@synthesize completionBlock;
+typedef void (^MBProgressHUDCompletionBlock)();
 #endif
 
-#pragma mark - Class methods
+
+/**
+ * Displays a simple HUD window containing a progress indicator and two optional labels for short messages.
+ *
+ * This is a simple drop-in class for displaying a progress HUD view similar to Apple's private UIProgressHUD class.
+ * The MBProgressHUD window spans over the entire space given to it by the initWithFrame constructor and catches all
+ * user input on this region, thereby preventing the user operations on components below the view. The HUD itself is
+ * drawn centered as a rounded semi-transparent view which resizes depending on the user specified content.
+ *
+ * This view supports four modes of operation:
+ *  - MBProgressHUDModeIndeterminate - shows a UIActivityIndicatorView
+ *  - MBProgressHUDModeDeterminate - shows a custom round progress indicator
+ *  - MBProgressHUDModeAnnularDeterminate - shows a custom annular progress indicator
+ *  - MBProgressHUDModeCustomView - shows an arbitrary, user specified view (see `customView`)
+ *
+ * All three modes can have optional labels assigned:
+ *  - If the labelText property is set and non-empty then a label containing the provided content is placed below the
+ *    indicator view.
+ *  - If also the detailsLabelText property is set then another label is placed below the first label.
+ */
+@interface MBProgressHUD : UIView
+
+/**
+ * Creates a new HUD, adds it to provided view and shows it. The counterpart to this method is hideHUDForView:animated:.
+ *
+ * @note This method sets `removeFromSuperViewOnHide`. The HUD will automatically be removed from the view hierarchy when hidden.
+ *
+ * @param view The view that the HUD will be added to
+ * @param animated If set to YES the HUD will appear using the current animationType. If set to NO the HUD will not use
+ * animations while appearing.
+ * @return A reference to the created HUD.
+ *
+ * @see hideHUDForView:animated:
+ * @see animationType
+ */
++ (MB_INSTANCETYPE)showHUDAddedTo:(UIView *)view animated:(BOOL)animated;
+
+/**
+ * Finds the top-most HUD subview and hides it. The counterpart to this method is showHUDAddedTo:animated:.
+ *
+ * @note This method sets `removeFromSuperViewOnHide`. The HUD will automatically be removed from the view hierarchy when hidden.
+ *
+ * @param view The view that is going to be searched for a HUD subview.
+ * @param animated If set to YES the HUD will disappear using the current animationType. If set to NO the HUD will not use
+ * animations while disappearing.
+ * @return YES if a HUD was found and removed, NO otherwise.
+ *
+ * @see showHUDAddedTo:animated:
+ * @see animationType
+ */
++ (BOOL)hideHUDForView:(UIView *)view animated:(BOOL)animated;
+
+/**
+ * Finds all the HUD subviews and hides them.
+ *
+ * @note This method sets `removeFromSuperViewOnHide`. The HUDs will automatically be removed from the view hierarchy when hidden.
+ *
+ * @param view The view that is going to be searched for HUD subviews.
+ * @param animated If set to YES the HUDs will disappear using the current animationType. If set to NO the HUDs will not use
+ * animations while disappearing.
+ * @return the number of HUDs found and removed.
+ *
+ * @see hideHUDForView:animated:
+ * @see animationType
+ */
++ (NSUInteger)hideAllHUDsForView:(UIView *)view animated:(BOOL)animated;
+
+/**
+ * Finds the top-most HUD subview and returns it.
+ *
+ * @param view The view that is going to be searched.
+ * @return A reference to the last HUD subview discovered.
+ */
++ (MB_INSTANCETYPE)HUDForView:(UIView *)view;
+
+/**
+ * Finds all HUD subviews and returns them.
+ *
+ * @param view The view that is going to be searched.
+ * @return All found HUD views (array of MBProgressHUD objects).
+ */
++ (NSArray *)allHUDsForView:(UIView *)view;
+
+/**
+ * A convenience constructor that initializes the HUD with the window's bounds. Calls the designated constructor with
+ * window.bounds as the parameter.
+ *
+ * @param window The window instance that will provide the bounds for the HUD. Should be the same instance as
+ * the HUD's superview (i.e., the window that the HUD will be added to).
+ */
+- (id)initWithWindow:(UIWindow *)window;
+
+/**
+ * A convenience constructor that initializes the HUD with the view's bounds. Calls the designated constructor with
+ * view.bounds as the parameter
+ *
+ * @param view The view instance that will provide the bounds for the HUD. Should be the same instance as
+ * the HUD's superview (i.e., the view that the HUD will be added to).
+ */
+- (id)initWithView:(UIView *)view;
+
+/**
+ * Display the HUD. You need to make sure that the main thread completes its run loop soon after this method call so
+ * the user interface can be updated. Call this method when your task is already set-up to be executed in a new thread
+ * (e.g., when using something like NSOperation or calling an asynchronous call like NSURLRequest).
+ *
+ * @param animated If set to YES the HUD will appear using the current animationType. If set to NO the HUD will not use
+ * animations while appearing.
+ *
+ * @see animationType
+ */
+- (void)show:(BOOL)animated;
+
+/**
+ * Hide the HUD. This still calls the hudWasHidden: delegate. This is the counterpart of the show: method. Use it to
+ * hide the HUD when your task completes.
+ *
+ * @param animated If set to YES the HUD will disappear using the current animationType. If set to NO the HUD will not use
+ * animations while disappearing.
+ *
+ * @see animationType
+ */
+- (void)hide:(BOOL)animated;
+
+/**
+ * Hide the HUD after a delay. This still calls the hudWasHidden: delegate. This is the counterpart of the show: method. Use it to
+ * hide the HUD when your task completes.
+ *
+ * @param animated If set to YES the HUD will disappear using the current animationType. If set to NO the HUD will not use
+ * animations while disappearing.
+ * @param delay Delay in seconds until the HUD is hidden.
+ *
+ * @see animationType
+ */
+- (void)hide:(BOOL)animated afterDelay:(NSTimeInterval)delay;
+
+/**
+ * Shows the HUD while a background task is executing in a new thread, then hides the HUD.
+ *
+ * This method also takes care of autorelease pools so your method does not have to be concerned with setting up a
+ * pool.
+ *
+ * @param method The method to be executed while the HUD is shown. This method will be executed in a new thread.
+ * @param target The object that the target method belongs to.
+ * @param object An optional object to be passed to the method.
+ * @param animated If set to YES the HUD will (dis)appear using the current animationType. If set to NO the HUD will not use
+ * animations while (dis)appearing.
+ */
+- (void)showWhileExecuting:(SEL)method onTarget:(id)target withObject:(id)object animated:(BOOL)animated;
+
+#if NS_BLOCKS_AVAILABLE
+
+/**
+ * Shows the HUD while a block is executing on a background queue, then hides the HUD.
+ *
+ * @see showAnimated:whileExecutingBlock:onQueue:completionBlock:
+ */
+- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block;
+
+/**
+ * Shows the HUD while a block is executing on a background queue, then hides the HUD.
+ *
+ * @see showAnimated:whileExecutingBlock:onQueue:completionBlock:
+ */
+- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block completionBlock:(MBProgressHUDCompletionBlock)completion;
+
+/**
+ * Shows the HUD while a block is executing on the specified dispatch queue, then hides the HUD.
+ *
+ * @see showAnimated:whileExecutingBlock:onQueue:completionBlock:
+ */
+- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block onQueue:(dispatch_queue_t)queue;
+
+/**
+ * Shows the HUD while a block is executing on the specified dispatch queue, executes completion block on the main queue, and then hides the HUD.
+ *
+ * @param animated If set to YES the HUD will (dis)appear using the current animationType. If set to NO the HUD will
+ * not use animations while (dis)appearing.
+ * @param block The block to be executed while the HUD is shown.
+ * @param queue The dispatch queue on which the block should be executed.
+ * @param completion The block to be executed on completion.
+ *
+ * @see completionBlock
+ */
+- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block onQueue:(dispatch_queue_t)queue
+     completionBlock:(MBProgressHUDCompletionBlock)completion;
+
+/**
+ * A block that gets called after the HUD was completely hidden.
+ */
+@property (copy) MBProgressHUDCompletionBlock completionBlock;
 
 
 /**
  弹出错误提示
  
- @param message 错误内容
+ @param message 内容
  @param view 显示view
  */
-+ (void)showMessage:(NSString *)message toView:(UIView *)view{
-    if (view == nil) view = [[UIApplication sharedApplication].windows lastObject];
-    // 快速显示一个提示信息
-    MBProgressHUD *hud = [MBProgressHUD showHUDAddedTo:view animated:YES];
-    hud.labelText = message;
-    // 设置图片
-    //    hud.customView = [[UIImageView alloc] initWithImage:[UIImage imageNamed:[NSString stringWithFormat:@"MBProgressHUD.bundle/%@", icon]]];
-    // 再设置模式
-    hud.mode = MBProgressHUDModeCustomView;
-    
-    // 隐藏时候从父控件中移除
-    hud.removeFromSuperViewOnHide = YES;
-    
-    // 1秒之后再消失
-    [hud hide:YES afterDelay:1.5];
-}
++ (void)showMessage:(NSString *)message toView:(UIView *)view;
 
-+ (MB_INSTANCETYPE)showHUDAddedTo:(UIView *)view animated:(BOOL)animated {
-    MBProgressHUD *hud = [[self alloc] initWithView:view];
-    hud.removeFromSuperViewOnHide = YES;
-    [view addSubview:hud];
-    [hud show:animated];
-    return MB_AUTORELEASE(hud);
-}
-
-+ (BOOL)hideHUDForView:(UIView *)view animated:(BOOL)animated {
-    MBProgressHUD *hud = [self HUDForView:view];
-    if (hud != nil) {
-        hud.removeFromSuperViewOnHide = YES;
-        [hud hide:animated];
-        return YES;
-    }
-    return NO;
-}
-
-+ (NSUInteger)hideAllHUDsForView:(UIView *)view animated:(BOOL)animated {
-    NSArray *huds = [MBProgressHUD allHUDsForView:view];
-    for (MBProgressHUD *hud in huds) {
-        hud.removeFromSuperViewOnHide = YES;
-        [hud hide:animated];
-    }
-    return [huds count];
-}
-
-+ (MB_INSTANCETYPE)HUDForView:(UIView *)view {
-    NSEnumerator *subviewsEnum = [view.subviews reverseObjectEnumerator];
-    for (UIView *subview in subviewsEnum) {
-        if ([subview isKindOfClass:self]) {
-            return (MBProgressHUD *)subview;
-        }
-    }
-    return nil;
-}
-
-+ (NSArray *)allHUDsForView:(UIView *)view {
-    NSMutableArray *huds = [NSMutableArray array];
-    NSArray *subviews = view.subviews;
-    for (UIView *aView in subviews) {
-        if ([aView isKindOfClass:self]) {
-            [huds addObject:aView];
-        }
-    }
-    return [NSArray arrayWithArray:huds];
-}
-
-#pragma mark - Lifecycle
-
-- (id)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
-    if (self) {
-        // Set default values for properties
-        self.animationType = MBProgressHUDAnimationFade;
-        self.mode = MBProgressHUDModeIndeterminate;
-        self.labelText = nil;
-        self.detailsLabelText = nil;
-        self.opacity = 0.8f;
-        self.color = nil;
-        self.labelFont = [UIFont boldSystemFontOfSize:kLabelFontSize];
-        self.labelColor = [UIColor whiteColor];
-        self.detailsLabelFont = [UIFont boldSystemFontOfSize:kDetailsLabelFontSize];
-        self.detailsLabelColor = [UIColor whiteColor];
-        self.activityIndicatorColor = [UIColor whiteColor];
-        self.xOffset = 0.0f;
-        self.yOffset = 0.0f;
-        self.dimBackground = NO;
-        self.margin = 20.0f;
-        self.cornerRadius = 10.0f;
-        self.graceTime = 0.0f;
-        self.minShowTime = 0.0f;
-        self.removeFromSuperViewOnHide = NO;
-        self.minSize = CGSizeZero;
-        self.square = NO;
-        self.contentMode = UIViewContentModeCenter;
-        self.autoresizingMask = UIViewAutoresizingFlexibleTopMargin | UIViewAutoresizingFlexibleBottomMargin
-								| UIViewAutoresizingFlexibleLeftMargin | UIViewAutoresizingFlexibleRightMargin;
-        
-        // Transparent background
-        self.opaque = NO;
-        self.backgroundColor = [UIColor clearColor];
-        // Make it invisible for now
-        self.alpha = 0.0f;
-        
-        taskInProgress = NO;
-        rotationTransform = CGAffineTransformIdentity;
-        
-        [self setupLabels];
-        [self updateIndicators];
-        [self registerForKVO];
-        [self registerForNotifications];
-    }
-    return self;
-}
-
-- (id)initWithView:(UIView *)view {
-    NSAssert(view, @"View must not be nil.");
-    return [self initWithFrame:view.bounds];
-}
-
-- (id)initWithWindow:(UIWindow *)window {
-    return [self initWithView:window];
-}
-
-- (void)dealloc {
-    [self unregisterFromNotifications];
-    [self unregisterFromKVO];
-#if !__has_feature(objc_arc)
-    [color release];
-    [indicator release];
-    [label release];
-    [detailsLabel release];
-    [labelText release];
-    [detailsLabelText release];
-    [graceTimer release];
-    [minShowTimer release];
-    [showStarted release];
-    [customView release];
-    [labelFont release];
-    [labelColor release];
-    [detailsLabelFont release];
-    [detailsLabelColor release];
-#if NS_BLOCKS_AVAILABLE
-    [completionBlock release];
-#endif
-    [super dealloc];
-#endif
-}
-
-#pragma mark - Show & hide
-
-- (void)show:(BOOL)animated {
-    NSAssert([NSThread isMainThread], @"MBProgressHUD needs to be accessed on the main thread.");
-    useAnimation = animated;
-    // If the grace time is set postpone the HUD display
-    if (self.graceTime > 0.0) {
-        NSTimer *newGraceTimer = [NSTimer timerWithTimeInterval:self.graceTime target:self selector:@selector(handleGraceTimer:) userInfo:nil repeats:NO];
-        [[NSRunLoop currentRunLoop] addTimer:newGraceTimer forMode:NSRunLoopCommonModes];
-        self.graceTimer = newGraceTimer;
-    }
-    // ... otherwise show the HUD imediately
-    else {
-        [self showUsingAnimation:useAnimation];
-    }
-}
-
-- (void)hide:(BOOL)animated {
-    NSAssert([NSThread isMainThread], @"MBProgressHUD needs to be accessed on the main thread.");
-    useAnimation = animated;
-    // If the minShow time is set, calculate how long the hud was shown,
-    // and pospone the hiding operation if necessary
-    if (self.minShowTime > 0.0 && showStarted) {
-        NSTimeInterval interv = [[NSDate date] timeIntervalSinceDate:showStarted];
-        if (interv < self.minShowTime) {
-            self.minShowTimer = [NSTimer scheduledTimerWithTimeInterval:(self.minShowTime - interv) target:self
-                                                               selector:@selector(handleMinShowTimer:) userInfo:nil repeats:NO];
-            return;
-        }
-    }
-    // ... otherwise hide the HUD immediately
-    [self hideUsingAnimation:useAnimation];
-}
-
-- (void)hide:(BOOL)animated afterDelay:(NSTimeInterval)delay {
-    [self performSelector:@selector(hideDelayed:) withObject:[NSNumber numberWithBool:animated] afterDelay:delay];
-}
-
-- (void)hideDelayed:(NSNumber *)animated {
-    [self hide:[animated boolValue]];
-}
-
-#pragma mark - Timer callbacks
-
-- (void)handleGraceTimer:(NSTimer *)theTimer {
-    // Show the HUD only if the task is still running
-    if (taskInProgress) {
-        [self showUsingAnimation:useAnimation];
-    }
-}
-
-- (void)handleMinShowTimer:(NSTimer *)theTimer {
-    [self hideUsingAnimation:useAnimation];
-}
-
-#pragma mark - View Hierrarchy
-
-- (void)didMoveToSuperview {
-    [self updateForCurrentOrientationAnimated:NO];
-}
-
-#pragma mark - Internal show & hide operations
-
-- (void)showUsingAnimation:(BOOL)animated {
-    // Cancel any scheduled hideDelayed: calls
-    [NSObject cancelPreviousPerformRequestsWithTarget:self];
-    [self setNeedsDisplay];
-    
-    if (animated && animationType == MBProgressHUDAnimationZoomIn) {
-        self.transform = CGAffineTransformConcat(rotationTransform, CGAffineTransformMakeScale(0.5f, 0.5f));
-    } else if (animated && animationType == MBProgressHUDAnimationZoomOut) {
-        self.transform = CGAffineTransformConcat(rotationTransform, CGAffineTransformMakeScale(1.5f, 1.5f));
-    }
-    self.showStarted = [NSDate date];
-    // Fade in
-    if (animated) {
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.30];
-        self.alpha = 1.0f;
-        if (animationType == MBProgressHUDAnimationZoomIn || animationType == MBProgressHUDAnimationZoomOut) {
-            self.transform = rotationTransform;
-        }
-        [UIView commitAnimations];
-    }
-    else {
-        self.alpha = 1.0f;
-    }
-}
-
-- (void)hideUsingAnimation:(BOOL)animated {
-    // Fade out
-    if (animated && showStarted) {
-        [UIView beginAnimations:nil context:NULL];
-        [UIView setAnimationDuration:0.30];
-        [UIView setAnimationDelegate:self];
-        [UIView setAnimationDidStopSelector:@selector(animationFinished:finished:context:)];
-        // 0.02 prevents the hud from passing through touches during the animation the hud will get completely hidden
-        // in the done method
-        if (animationType == MBProgressHUDAnimationZoomIn) {
-            self.transform = CGAffineTransformConcat(rotationTransform, CGAffineTransformMakeScale(1.5f, 1.5f));
-        } else if (animationType == MBProgressHUDAnimationZoomOut) {
-            self.transform = CGAffineTransformConcat(rotationTransform, CGAffineTransformMakeScale(0.5f, 0.5f));
-        }
-        
-        self.alpha = 0.02f;
-        [UIView commitAnimations];
-    }
-    else {
-        self.alpha = 0.0f;
-        [self done];
-    }
-    self.showStarted = nil;
-}
-
-- (void)animationFinished:(NSString *)animationID finished:(BOOL)finished context:(void*)context {
-    [self done];
-}
-
-- (void)done {
-    [NSObject cancelPreviousPerformRequestsWithTarget:self];
-    isFinished = YES;
-    self.alpha = 0.0f;
-    if (removeFromSuperViewOnHide) {
-        [self removeFromSuperview];
-    }
-#if NS_BLOCKS_AVAILABLE
-    if (self.completionBlock) {
-        self.completionBlock();
-        self.completionBlock = NULL;
-    }
-#endif
-    if ([delegate respondsToSelector:@selector(hudWasHidden:)]) {
-        [delegate performSelector:@selector(hudWasHidden:) withObject:self];
-    }
-}
-
-#pragma mark - Threading
-
-- (void)showWhileExecuting:(SEL)method onTarget:(id)target withObject:(id)object animated:(BOOL)animated {
-    methodForExecution = method;
-    targetForExecution = MB_RETAIN(target);
-    objectForExecution = MB_RETAIN(object);
-    // Launch execution in new thread
-    self.taskInProgress = YES;
-    [NSThread detachNewThreadSelector:@selector(launchExecution) toTarget:self withObject:nil];
-    // Show HUD view
-    [self show:animated];
-}
-
-#if NS_BLOCKS_AVAILABLE
-
-- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block {
-    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-    [self showAnimated:animated whileExecutingBlock:block onQueue:queue completionBlock:NULL];
-}
-
-- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block completionBlock:(void (^)())completion {
-    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0);
-    [self showAnimated:animated whileExecutingBlock:block onQueue:queue completionBlock:completion];
-}
-
-- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block onQueue:(dispatch_queue_t)queue {
-    [self showAnimated:animated whileExecutingBlock:block onQueue:queue	completionBlock:NULL];
-}
-
-- (void)showAnimated:(BOOL)animated whileExecutingBlock:(dispatch_block_t)block onQueue:(dispatch_queue_t)queue
-     completionBlock:(MBProgressHUDCompletionBlock)completion {
-    self.taskInProgress = YES;
-    self.completionBlock = completion;
-    dispatch_async(queue, ^(void) {
-        block();
-        dispatch_async(dispatch_get_main_queue(), ^(void) {
-            [self cleanUp];
-        });
-    });
-    [self show:animated];
-}
 
 #endif
 
-- (void)launchExecution {
-    @autoreleasepool {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Warc-performSelector-leaks"
-        // Start executing the requested task
-        [targetForExecution performSelector:methodForExecution withObject:objectForExecution];
-#pragma clang diagnostic pop
-        // Task completed, update view in main thread (note: view operations should
-        // be done only in the main thread)
-        [self performSelectorOnMainThread:@selector(cleanUp) withObject:nil waitUntilDone:NO];
-    }
-}
+/**
+ * MBProgressHUD operation mode. The default is MBProgressHUDModeIndeterminate.
+ *
+ * @see MBProgressHUDMode
+ */
+@property (assign) MBProgressHUDMode mode;
 
-- (void)cleanUp {
-    taskInProgress = NO;
-#if !__has_feature(objc_arc)
-    [targetForExecution release];
-    [objectForExecution release];
-#else
-    targetForExecution = nil;
-    objectForExecution = nil;
-#endif
-    [self hide:useAnimation];
-}
+/**
+ * The animation type that should be used when the HUD is shown and hidden.
+ *
+ * @see MBProgressHUDAnimation
+ */
+@property (assign) MBProgressHUDAnimation animationType;
 
-#pragma mark - UI
+/**
+ * The UIView (e.g., a UIImageView) to be shown when the HUD is in MBProgressHUDModeCustomView.
+ * For best results use a 37 by 37 pixel view (so the bounds match the built in indicator bounds).
+ */
+@property (MB_STRONG) UIView *customView;
 
-- (void)setupLabels {
-    label = [[UILabel alloc] initWithFrame:self.bounds];
-    label.adjustsFontSizeToFitWidth = NO;
-    label.textAlignment = MBLabelAlignmentCenter;
-    label.opaque = NO;
-    label.backgroundColor = [UIColor clearColor];
-    label.textColor = self.labelColor;
-    label.font = self.labelFont;
-    label.text = self.labelText;
-    [self addSubview:label];
-    
-    detailsLabel = [[UILabel alloc] initWithFrame:self.bounds];
-    detailsLabel.font = self.detailsLabelFont;
-    detailsLabel.adjustsFontSizeToFitWidth = NO;
-    detailsLabel.textAlignment = MBLabelAlignmentCenter;
-    detailsLabel.opaque = NO;
-    detailsLabel.backgroundColor = [UIColor clearColor];
-    detailsLabel.textColor = self.detailsLabelColor;
-    detailsLabel.numberOfLines = 0;
-    detailsLabel.font = self.detailsLabelFont;
-    detailsLabel.text = self.detailsLabelText;
-    [self addSubview:detailsLabel];
-}
+/**
+ * The HUD delegate object.
+ *
+ * @see MBProgressHUDDelegate
+ */
+@property (MB_WEAK) id<MBProgressHUDDelegate> delegate;
 
-- (void)updateIndicators {
-    
-    BOOL isActivityIndicator = [indicator isKindOfClass:[UIActivityIndicatorView class]];
-    BOOL isRoundIndicator = [indicator isKindOfClass:[MBRoundProgressView class]];
-    
-    if (mode == MBProgressHUDModeIndeterminate) {
-        if (!isActivityIndicator) {
-            // Update to indeterminate indicator
-            [indicator removeFromSuperview];
-            self.indicator = MB_AUTORELEASE([[UIActivityIndicatorView alloc]
-                                             initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhiteLarge]);
-            [(UIActivityIndicatorView *)indicator startAnimating];
-            [self addSubview:indicator];
-        }
-#if __IPHONE_OS_VERSION_MIN_REQUIRED >= 50000
-        [(UIActivityIndicatorView *)indicator setColor:self.activityIndicatorColor];
-#endif
-    }
-    else if (mode == MBProgressHUDModeDeterminateHorizontalBar) {
-        // Update to bar determinate indicator
-        [indicator removeFromSuperview];
-        self.indicator = MB_AUTORELEASE([[MBBarProgressView alloc] init]);
-        [self addSubview:indicator];
-    }
-    else if (mode == MBProgressHUDModeDeterminate || mode == MBProgressHUDModeAnnularDeterminate) {
-        if (!isRoundIndicator) {
-            // Update to determinante indicator
-            [indicator removeFromSuperview];
-            self.indicator = MB_AUTORELEASE([[MBRoundProgressView alloc] init]);
-            [self addSubview:indicator];
-        }
-        if (mode == MBProgressHUDModeAnnularDeterminate) {
-            [(MBRoundProgressView *)indicator setAnnular:YES];
-        }
-    }
-    else if (mode == MBProgressHUDModeCustomView && customView != indicator) {
-        // Update custom view indicator
-        [indicator removeFromSuperview];
-        self.indicator = customView;
-        [self addSubview:indicator];
-    } else if (mode == MBProgressHUDModeText) {
-        [indicator removeFromSuperview];
-        self.indicator = nil;
-    }
-}
+/**
+ * An optional short message to be displayed below the activity indicator. The HUD is automatically resized to fit
+ * the entire text. If the text is too long it will get clipped by displaying "..." at the end. If left unchanged or
+ * set to @"", then no message is displayed.
+ */
+@property (copy) NSString *labelText;
 
-#pragma mark - Layout
+/**
+ * An optional details message displayed below the labelText message. This message is displayed only if the labelText
+ * property is also set and is different from an empty string (@""). The details text can span multiple lines.
+ */
+@property (copy) NSString *detailsLabelText;
 
-- (void)layoutSubviews {
-    [super layoutSubviews];
-    
-    // Entirely cover the parent view
-    UIView *parent = self.superview;
-    if (parent) {
-        self.frame = parent.bounds;
-    }
-    CGRect bounds = self.bounds;
-    
-    // Determine the total widt and height needed
-    CGFloat maxWidth = bounds.size.width - 4 * margin;
-    CGSize totalSize = CGSizeZero;
-    
-    CGRect indicatorF = indicator.bounds;
-    indicatorF.size.width = MIN(indicatorF.size.width, maxWidth);
-    totalSize.width = MAX(totalSize.width, indicatorF.size.width);
-    totalSize.height += indicatorF.size.height;
-    
-    CGSize labelSize = MB_TEXTSIZE(label.text, label.font);
-    labelSize.width = MIN(labelSize.width, maxWidth);
-    totalSize.width = MAX(totalSize.width, labelSize.width);
-    totalSize.height += labelSize.height;
-    if (labelSize.height > 0.f && indicatorF.size.height > 0.f) {
-        totalSize.height += kPadding;
-    }
-    
-    CGFloat remainingHeight = bounds.size.height - totalSize.height - kPadding - 4 * margin;
-    CGSize maxSize = CGSizeMake(maxWidth, remainingHeight);
-    CGSize detailsLabelSize = MB_MULTILINE_TEXTSIZE(detailsLabel.text, detailsLabel.font, maxSize, detailsLabel.lineBreakMode);
-    totalSize.width = MAX(totalSize.width, detailsLabelSize.width);
-    totalSize.height += detailsLabelSize.height;
-    if (detailsLabelSize.height > 0.f && (indicatorF.size.height > 0.f || labelSize.height > 0.f)) {
-        totalSize.height += kPadding;
-    }
-    
-    totalSize.width += 2 * margin;
-    totalSize.height += 2 * margin;
-    
-    // Position elements
-    CGFloat yPos = round(((bounds.size.height - totalSize.height) / 2)) + margin + yOffset;
-    CGFloat xPos = xOffset;
-    indicatorF.origin.y = yPos;
-    indicatorF.origin.x = round((bounds.size.width - indicatorF.size.width) / 2) + xPos;
-    indicator.frame = indicatorF;
-    yPos += indicatorF.size.height;
-    
-    if (labelSize.height > 0.f && indicatorF.size.height > 0.f) {
-        yPos += kPadding;
-    }
-    CGRect labelF;
-    labelF.origin.y = yPos;
-    labelF.origin.x = round((bounds.size.width - labelSize.width) / 2) + xPos;
-    labelF.size = labelSize;
-    label.frame = labelF;
-    yPos += labelF.size.height;
-    
-    if (detailsLabelSize.height > 0.f && (indicatorF.size.height > 0.f || labelSize.height > 0.f)) {
-        yPos += kPadding;
-    }
-    CGRect detailsLabelF;
-    detailsLabelF.origin.y = yPos;
-    detailsLabelF.origin.x = round((bounds.size.width - detailsLabelSize.width) / 2) + xPos;
-    detailsLabelF.size = detailsLabelSize;
-    detailsLabel.frame = detailsLabelF;
-    
-    // Enforce minsize and quare rules
-    if (square) {
-        CGFloat max = MAX(totalSize.width, totalSize.height);
-        if (max <= bounds.size.width - 2 * margin) {
-            totalSize.width = max;
-        }
-        if (max <= bounds.size.height - 2 * margin) {
-            totalSize.height = max;
-        }
-    }
-    if (totalSize.width < minSize.width) {
-        totalSize.width = minSize.width;
-    }
-    if (totalSize.height < minSize.height) {
-        totalSize.height = minSize.height;
-    }
-    
-    size = totalSize;
-}
+/**
+ * The opacity of the HUD window. Defaults to 0.8 (80% opacity).
+ */
+@property (assign) float opacity;
 
-#pragma mark BG Drawing
+/**
+ * The color of the HUD window. Defaults to black. If this property is set, color is set using
+ * this UIColor and the opacity property is not used.  using retain because performing copy on
+ * UIColor base colors (like [UIColor greenColor]) cause problems with the copyZone.
+ */
+@property (MB_STRONG) UIColor *color;
 
-- (void)drawRect:(CGRect)rect {
-    
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    UIGraphicsPushContext(context);
-    
-    if (self.dimBackground) {
-        //Gradient colours
-        size_t gradLocationsNum = 2;
-        CGFloat gradLocations[2] = {0.0f, 1.0f};
-        CGFloat gradColors[8] = {0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,0.75f};
-        CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
-        CGGradientRef gradient = CGGradientCreateWithColorComponents(colorSpace, gradColors, gradLocations, gradLocationsNum);
-        CGColorSpaceRelease(colorSpace);
-        //Gradient center
-        CGPoint gradCenter= CGPointMake(self.bounds.size.width/2, self.bounds.size.height/2);
-        //Gradient radius
-        float gradRadius = MIN(self.bounds.size.width , self.bounds.size.height) ;
-        //Gradient draw
-        CGContextDrawRadialGradient (context, gradient, gradCenter,
-                                     0, gradCenter, gradRadius,
-                                     kCGGradientDrawsAfterEndLocation);
-        CGGradientRelease(gradient);
-    }
-    
-    // Set background rect color
-    if (self.color) {
-        CGContextSetFillColorWithColor(context, self.color.CGColor);
-    } else {
-        CGContextSetGrayFillColor(context, 0.0f, self.opacity);
-    }
-    
-    
-    // Center HUD
-    CGRect allRect = self.bounds;
-    // Draw rounded HUD backgroud rect
-    CGRect boxRect = CGRectMake(round((allRect.size.width - size.width) / 2) + self.xOffset,
-                                round((allRect.size.height - size.height) / 2) + self.yOffset, size.width, size.height);
-    float radius = self.cornerRadius;
-    CGContextBeginPath(context);
-    CGContextMoveToPoint(context, CGRectGetMinX(boxRect) + radius, CGRectGetMinY(boxRect));
-    CGContextAddArc(context, CGRectGetMaxX(boxRect) - radius, CGRectGetMinY(boxRect) + radius, radius, 3 * (float)M_PI / 2, 0, 0);
-    CGContextAddArc(context, CGRectGetMaxX(boxRect) - radius, CGRectGetMaxY(boxRect) - radius, radius, 0, (float)M_PI / 2, 0);
-    CGContextAddArc(context, CGRectGetMinX(boxRect) + radius, CGRectGetMaxY(boxRect) - radius, radius, (float)M_PI / 2, (float)M_PI, 0);
-    CGContextAddArc(context, CGRectGetMinX(boxRect) + radius, CGRectGetMinY(boxRect) + radius, radius, (float)M_PI, 3 * (float)M_PI / 2, 0);
-    CGContextClosePath(context);
-    CGContextFillPath(context);
-    
-    UIGraphicsPopContext();
-}
+/**
+ * The x-axis offset of the HUD relative to the centre of the superview.
+ */
+@property (assign) float xOffset;
 
-#pragma mark - KVO
+/**
+ * The y-axis offset of the HUD relative to the centre of the superview.
+ */
+@property (assign) float yOffset;
 
-- (void)registerForKVO {
-    for (NSString *keyPath in [self observableKeypaths]) {
-        [self addObserver:self forKeyPath:keyPath options:NSKeyValueObservingOptionNew context:NULL];
-    }
-}
+/**
+ * The amount of space between the HUD edge and the HUD elements (labels, indicators or custom views).
+ * Defaults to 20.0
+ */
+@property (assign) float margin;
 
-- (void)unregisterFromKVO {
-    for (NSString *keyPath in [self observableKeypaths]) {
-        [self removeObserver:self forKeyPath:keyPath];
-    }
-}
+/**
+ * The corner radius for the HUD
+ * Defaults to 10.0
+ */
+@property (assign) float cornerRadius;
 
-- (NSArray *)observableKeypaths {
-    return [NSArray arrayWithObjects:@"mode", @"customView", @"labelText", @"labelFont", @"labelColor",
-            @"detailsLabelText", @"detailsLabelFont", @"detailsLabelColor", @"progress", @"activityIndicatorColor", nil];
-}
+/**
+ * Cover the HUD background view with a radial gradient.
+ */
+@property (assign) BOOL dimBackground;
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    if (![NSThread isMainThread]) {
-        [self performSelectorOnMainThread:@selector(updateUIForKeypath:) withObject:keyPath waitUntilDone:NO];
-    } else {
-        [self updateUIForKeypath:keyPath];
-    }
-}
+/*
+ * Grace period is the time (in seconds) that the invoked method may be run without
+ * showing the HUD. If the task finishes before the grace time runs out, the HUD will
+ * not be shown at all.
+ * This may be used to prevent HUD display for very short tasks.
+ * Defaults to 0 (no grace time).
+ * Grace time functionality is only supported when the task status is known!
+ * @see taskInProgress
+ */
+@property (assign) float graceTime;
 
-- (void)updateUIForKeypath:(NSString *)keyPath {
-    if ([keyPath isEqualToString:@"mode"] || [keyPath isEqualToString:@"customView"] ||
-        [keyPath isEqualToString:@"activityIndicatorColor"]) {
-        [self updateIndicators];
-    } else if ([keyPath isEqualToString:@"labelText"]) {
-        label.text = self.labelText;
-    } else if ([keyPath isEqualToString:@"labelFont"]) {
-        label.font = self.labelFont;
-    } else if ([keyPath isEqualToString:@"labelColor"]) {
-        label.textColor = self.labelColor;
-    } else if ([keyPath isEqualToString:@"detailsLabelText"]) {
-        detailsLabel.text = self.detailsLabelText;
-    } else if ([keyPath isEqualToString:@"detailsLabelFont"]) {
-        detailsLabel.font = self.detailsLabelFont;
-    } else if ([keyPath isEqualToString:@"detailsLabelColor"]) {
-        detailsLabel.textColor = self.detailsLabelColor;
-    } else if ([keyPath isEqualToString:@"progress"]) {
-        if ([indicator respondsToSelector:@selector(setProgress:)]) {
-            [(id)indicator setValue:@(progress) forKey:@"progress"];
-        }
-        return;
-    }
-    [self setNeedsLayout];
-    [self setNeedsDisplay];
-}
+/**
+ * The minimum time (in seconds) that the HUD is shown.
+ * This avoids the problem of the HUD being shown and than instantly hidden.
+ * Defaults to 0 (no minimum show time).
+ */
+@property (assign) float minShowTime;
 
-#pragma mark - Notifications
+/**
+ * Indicates that the executed operation is in progress. Needed for correct graceTime operation.
+ * If you don't set a graceTime (different than 0.0) this does nothing.
+ * This property is automatically set when using showWhileExecuting:onTarget:withObject:animated:.
+ * When threading is done outside of the HUD (i.e., when the show: and hide: methods are used directly),
+ * you need to set this property when your task starts and completes in order to have normal graceTime
+ * functionality.
+ */
+@property (assign) BOOL taskInProgress;
 
-- (void)registerForNotifications {
-#if !TARGET_OS_TV
-    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    
-    [nc addObserver:self selector:@selector(statusBarOrientationDidChange:)
-               name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
-#endif
-}
+/**
+ * Removes the HUD from its parent view when hidden.
+ * Defaults to NO.
+ */
+@property (assign) BOOL removeFromSuperViewOnHide;
 
-- (void)unregisterFromNotifications {
-#if !TARGET_OS_TV
-    NSNotificationCenter *nc = [NSNotificationCenter defaultCenter];
-    [nc removeObserver:self name:UIApplicationDidChangeStatusBarOrientationNotification object:nil];
-#endif
-}
+/**
+ * Font to be used for the main label. Set this property if the default is not adequate.
+ */
+@property (MB_STRONG) UIFont* labelFont;
 
-#if !TARGET_OS_TV
-- (void)statusBarOrientationDidChange:(NSNotification *)notification {
-    UIView *superview = self.superview;
-    if (!superview) {
-        return;
-    } else {
-        [self updateForCurrentOrientationAnimated:YES];
-    }
-}
-#endif
+/**
+ * Color to be used for the main label. Set this property if the default is not adequate.
+ */
+@property (MB_STRONG) UIColor* labelColor;
 
-- (void)updateForCurrentOrientationAnimated:(BOOL)animated {
-    // Stay in sync with the superview in any case
-    if (self.superview) {
-        self.bounds = self.superview.bounds;
-        [self setNeedsDisplay];
-    }
-    
-    // Not needed on iOS 8+, compile out when the deployment target allows,
-    // to avoid sharedApplication problems on extension targets
-#if __IPHONE_OS_VERSION_MIN_REQUIRED < 80000
-    // Only needed pre iOS 7 when added to a window
-    BOOL iOS8OrLater = kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_8_0;
-    if (iOS8OrLater || ![self.superview isKindOfClass:[UIWindow class]]) return;
-    
-    UIInterfaceOrientation orientation = [UIApplication sharedApplication].statusBarOrientation;
-    CGFloat radians = 0;
-    if (UIInterfaceOrientationIsLandscape(orientation)) {
-        if (orientation == UIInterfaceOrientationLandscapeLeft) { radians = -(CGFloat)M_PI_2; }
-        else { radians = (CGFloat)M_PI_2; }
-        // Window coordinates differ!
-        self.bounds = CGRectMake(0, 0, self.bounds.size.height, self.bounds.size.width);
-    } else {
-        if (orientation == UIInterfaceOrientationPortraitUpsideDown) { radians = (CGFloat)M_PI; }
-        else { radians = 0; }
-    }
-    rotationTransform = CGAffineTransformMakeRotation(radians);
-    
-    if (animated) {
-        [UIView beginAnimations:nil context:nil];
-        [UIView setAnimationDuration:0.3];
-    }
-    [self setTransform:rotationTransform];
-    if (animated) {
-        [UIView commitAnimations];
-    }
-#endif
-}
+/**
+ * Font to be used for the details label. Set this property if the default is not adequate.
+ */
+@property (MB_STRONG) UIFont* detailsLabelFont;
+
+/**
+ * Color to be used for the details label. Set this property if the default is not adequate.
+ */
+@property (MB_STRONG) UIColor* detailsLabelColor;
+
+/**
+ * The color of the activity indicator. Defaults to [UIColor whiteColor]
+ * Does nothing on pre iOS 5.
+ */
+@property (MB_STRONG) UIColor *activityIndicatorColor;
+
+/**
+ * The progress of the progress indicator, from 0.0 to 1.0. Defaults to 0.0.
+ */
+@property (assign) float progress;
+
+/**
+ * The minimum size of the HUD bezel. Defaults to CGSizeZero (no minimum size).
+ */
+@property (assign) CGSize minSize;
+
+
+/**
+ * The actual size of the HUD bezel.
+ * You can use this to limit touch handling on the bezel area only.
+ * @see https://github.com/jdg/MBProgressHUD/pull/200
+ */
+@property (atomic, assign, readonly) CGSize size;
+
+
+/**
+ * Force the HUD dimensions to be equal if possible.
+ */
+@property (assign, getter = isSquare) BOOL square;
 
 @end
 
 
-@implementation MBRoundProgressView
+@protocol MBProgressHUDDelegate <NSObject>
 
-#pragma mark - Lifecycle
+@optional
 
-- (id)init {
-    return [self initWithFrame:CGRectMake(0.f, 0.f, 37.f, 37.f)];
-}
-
-- (id)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
-    if (self) {
-        self.backgroundColor = [UIColor clearColor];
-        self.opaque = NO;
-        _progress = 0.f;
-        _annular = NO;
-        _progressTintColor = [[UIColor alloc] initWithWhite:1.f alpha:1.f];
-        _backgroundTintColor = [[UIColor alloc] initWithWhite:1.f alpha:.1f];
-        [self registerForKVO];
-    }
-    return self;
-}
-
-- (void)dealloc {
-    [self unregisterFromKVO];
-#if !__has_feature(objc_arc)
-    [_progressTintColor release];
-    [_backgroundTintColor release];
-    [super dealloc];
-#endif
-}
-
-#pragma mark - Drawing
-
-- (void)drawRect:(CGRect)rect {
-    
-    CGRect allRect = self.bounds;
-    CGRect circleRect = CGRectInset(allRect, 2.0f, 2.0f);
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-    if (_annular) {
-        // Draw background
-        BOOL isPreiOS7 = kCFCoreFoundationVersionNumber < kCFCoreFoundationVersionNumber_iOS_7_0;
-        CGFloat lineWidth = isPreiOS7 ? 5.f : 2.f;
-        UIBezierPath *processBackgroundPath = [UIBezierPath bezierPath];
-        processBackgroundPath.lineWidth = lineWidth;
-        processBackgroundPath.lineCapStyle = kCGLineCapButt;
-        CGPoint center = CGPointMake(self.bounds.size.width/2, self.bounds.size.height/2);
-        CGFloat radius = (self.bounds.size.width - lineWidth)/2;
-        CGFloat startAngle = - ((float)M_PI / 2); // 90 degrees
-        CGFloat endAngle = (2 * (float)M_PI) + startAngle;
-        [processBackgroundPath addArcWithCenter:center radius:radius startAngle:startAngle endAngle:endAngle clockwise:YES];
-        [_backgroundTintColor set];
-        [processBackgroundPath stroke];
-        // Draw progress
-        UIBezierPath *processPath = [UIBezierPath bezierPath];
-        processPath.lineCapStyle = isPreiOS7 ? kCGLineCapRound : kCGLineCapSquare;
-        processPath.lineWidth = lineWidth;
-        endAngle = (self.progress * 2 * (float)M_PI) + startAngle;
-        [processPath addArcWithCenter:center radius:radius startAngle:startAngle endAngle:endAngle clockwise:YES];
-        [_progressTintColor set];
-        [processPath stroke];
-    } else {
-        // Draw background
-        [_progressTintColor setStroke];
-        [_backgroundTintColor setFill];
-        CGContextSetLineWidth(context, 2.0f);
-        CGContextFillEllipseInRect(context, circleRect);
-        CGContextStrokeEllipseInRect(context, circleRect);
-        // Draw progress
-        CGPoint center = CGPointMake(allRect.size.width / 2, allRect.size.height / 2);
-        CGFloat radius = (allRect.size.width - 4) / 2;
-        CGFloat startAngle = - ((float)M_PI / 2); // 90 degrees
-        CGFloat endAngle = (self.progress * 2 * (float)M_PI) + startAngle;
-        [_progressTintColor setFill];
-        CGContextMoveToPoint(context, center.x, center.y);
-        CGContextAddArc(context, center.x, center.y, radius, startAngle, endAngle, 0);
-        CGContextClosePath(context);
-        CGContextFillPath(context);
-    }
-}
-
-#pragma mark - KVO
-
-- (void)registerForKVO {
-    for (NSString *keyPath in [self observableKeypaths]) {
-        [self addObserver:self forKeyPath:keyPath options:NSKeyValueObservingOptionNew context:NULL];
-    }
-}
-
-- (void)unregisterFromKVO {
-    for (NSString *keyPath in [self observableKeypaths]) {
-        [self removeObserver:self forKeyPath:keyPath];
-    }
-}
-
-- (NSArray *)observableKeypaths {
-    return [NSArray arrayWithObjects:@"progressTintColor", @"backgroundTintColor", @"progress", @"annular", nil];
-}
-
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    [self setNeedsDisplay];
-}
+/**
+ * Called after the HUD was fully hidden from the screen.
+ */
+- (void)hudWasHidden:(MBProgressHUD *)hud;
 
 @end
 
 
-@implementation MBBarProgressView
+/**
+ * A progress view for showing definite progress by filling up a circle (pie chart).
+ */
+@interface MBRoundProgressView : UIView
 
-#pragma mark - Lifecycle
+/**
+ * Progress (0.0 to 1.0)
+ */
+@property (nonatomic, assign) float progress;
 
-- (id)init {
-    return [self initWithFrame:CGRectMake(.0f, .0f, 120.0f, 20.0f)];
-}
+/**
+ * Indicator progress color.
+ * Defaults to white [UIColor whiteColor]
+ */
+@property (nonatomic, MB_STRONG) UIColor *progressTintColor;
 
-- (id)initWithFrame:(CGRect)frame {
-    self = [super initWithFrame:frame];
-    if (self) {
-        _progress = 0.f;
-        _lineColor = [UIColor whiteColor];
-        _progressColor = [UIColor whiteColor];
-        _progressRemainingColor = [UIColor clearColor];
-        self.backgroundColor = [UIColor clearColor];
-        self.opaque = NO;
-        [self registerForKVO];
-    }
-    return self;
-}
+/**
+ * Indicator background (non-progress) color.
+ * Defaults to translucent white (alpha 0.1)
+ */
+@property (nonatomic, MB_STRONG) UIColor *backgroundTintColor;
 
-- (void)dealloc {
-    [self unregisterFromKVO];
-#if !__has_feature(objc_arc)
-    [_lineColor release];
-    [_progressColor release];
-    [_progressRemainingColor release];
-    [super dealloc];
-#endif
-}
+/*
+ * Display mode - NO = round or YES = annular. Defaults to round.
+ */
+@property (nonatomic, assign, getter = isAnnular) BOOL annular;
 
-#pragma mark - Drawing
+@end
 
-- (void)drawRect:(CGRect)rect {
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    
-    CGContextSetLineWidth(context, 2);
-    CGContextSetStrokeColorWithColor(context,[_lineColor CGColor]);
-    CGContextSetFillColorWithColor(context, [_progressRemainingColor CGColor]);
-    
-    // Draw background
-    float radius = (rect.size.height / 2) - 2;
-    CGContextMoveToPoint(context, 2, rect.size.height/2);
-    CGContextAddArcToPoint(context, 2, 2, radius + 2, 2, radius);
-    CGContextAddLineToPoint(context, rect.size.width - radius - 2, 2);
-    CGContextAddArcToPoint(context, rect.size.width - 2, 2, rect.size.width - 2, rect.size.height / 2, radius);
-    CGContextAddArcToPoint(context, rect.size.width - 2, rect.size.height - 2, rect.size.width - radius - 2, rect.size.height - 2, radius);
-    CGContextAddLineToPoint(context, radius + 2, rect.size.height - 2);
-    CGContextAddArcToPoint(context, 2, rect.size.height - 2, 2, rect.size.height/2, radius);
-    CGContextFillPath(context);
-    
-    // Draw border
-    CGContextMoveToPoint(context, 2, rect.size.height/2);
-    CGContextAddArcToPoint(context, 2, 2, radius + 2, 2, radius);
-    CGContextAddLineToPoint(context, rect.size.width - radius - 2, 2);
-    CGContextAddArcToPoint(context, rect.size.width - 2, 2, rect.size.width - 2, rect.size.height / 2, radius);
-    CGContextAddArcToPoint(context, rect.size.width - 2, rect.size.height - 2, rect.size.width - radius - 2, rect.size.height - 2, radius);
-    CGContextAddLineToPoint(context, radius + 2, rect.size.height - 2);
-    CGContextAddArcToPoint(context, 2, rect.size.height - 2, 2, rect.size.height/2, radius);
-    CGContextStrokePath(context);
-    
-    CGContextSetFillColorWithColor(context, [_progressColor CGColor]);
-    radius = radius - 2;
-    float amount = self.progress * rect.size.width;
-    
-    // Progress in the middle area
-    if (amount >= radius + 4 && amount <= (rect.size.width - radius - 4)) {
-        CGContextMoveToPoint(context, 4, rect.size.height/2);
-        CGContextAddArcToPoint(context, 4, 4, radius + 4, 4, radius);
-        CGContextAddLineToPoint(context, amount, 4);
-        CGContextAddLineToPoint(context, amount, radius + 4);
-        
-        CGContextMoveToPoint(context, 4, rect.size.height/2);
-        CGContextAddArcToPoint(context, 4, rect.size.height - 4, radius + 4, rect.size.height - 4, radius);
-        CGContextAddLineToPoint(context, amount, rect.size.height - 4);
-        CGContextAddLineToPoint(context, amount, radius + 4);
-        
-        CGContextFillPath(context);
-    }
-    
-    // Progress in the right arc
-    else if (amount > radius + 4) {
-        float x = amount - (rect.size.width - radius - 4);
-        
-        CGContextMoveToPoint(context, 4, rect.size.height/2);
-        CGContextAddArcToPoint(context, 4, 4, radius + 4, 4, radius);
-        CGContextAddLineToPoint(context, rect.size.width - radius - 4, 4);
-        float angle = -acos(x/radius);
-        if (isnan(angle)) angle = 0;
-        CGContextAddArc(context, rect.size.width - radius - 4, rect.size.height/2, radius, M_PI, angle, 0);
-        CGContextAddLineToPoint(context, amount, rect.size.height/2);
-        
-        CGContextMoveToPoint(context, 4, rect.size.height/2);
-        CGContextAddArcToPoint(context, 4, rect.size.height - 4, radius + 4, rect.size.height - 4, radius);
-        CGContextAddLineToPoint(context, rect.size.width - radius - 4, rect.size.height - 4);
-        angle = acos(x/radius);
-        if (isnan(angle)) angle = 0;
-        CGContextAddArc(context, rect.size.width - radius - 4, rect.size.height/2, radius, -M_PI, angle, 1);
-        CGContextAddLineToPoint(context, amount, rect.size.height/2);
-        
-        CGContextFillPath(context);
-    }
-    
-    // Progress is in the left arc
-    else if (amount < radius + 4 && amount > 0) {
-        CGContextMoveToPoint(context, 4, rect.size.height/2);
-        CGContextAddArcToPoint(context, 4, 4, radius + 4, 4, radius);
-        CGContextAddLineToPoint(context, radius + 4, rect.size.height/2);
-        
-        CGContextMoveToPoint(context, 4, rect.size.height/2);
-        CGContextAddArcToPoint(context, 4, rect.size.height - 4, radius + 4, rect.size.height - 4, radius);
-        CGContextAddLineToPoint(context, radius + 4, rect.size.height/2);
-        
-        CGContextFillPath(context);
-    }
-}
 
-#pragma mark - KVO
+/**
+ * A flat bar progress view.
+ */
+@interface MBBarProgressView : UIView
 
-- (void)registerForKVO {
-    for (NSString *keyPath in [self observableKeypaths]) {
-        [self addObserver:self forKeyPath:keyPath options:NSKeyValueObservingOptionNew context:NULL];
-    }
-}
+/**
+ * Progress (0.0 to 1.0)
+ */
+@property (nonatomic, assign) float progress;
 
-- (void)unregisterFromKVO {
-    for (NSString *keyPath in [self observableKeypaths]) {
-        [self removeObserver:self forKeyPath:keyPath];
-    }
-}
+/**
+ * Bar border line color.
+ * Defaults to white [UIColor whiteColor].
+ */
+@property (nonatomic, MB_STRONG) UIColor *lineColor;
 
-- (NSArray *)observableKeypaths {
-    return [NSArray arrayWithObjects:@"lineColor", @"progressRemainingColor", @"progressColor", @"progress", nil];
-}
+/**
+ * Bar background color.
+ * Defaults to clear [UIColor clearColor];
+ */
+@property (nonatomic, MB_STRONG) UIColor *progressRemainingColor;
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context {
-    [self setNeedsDisplay];
-}
+/**
+ * Bar progress color.
+ * Defaults to white [UIColor whiteColor].
+ */
+@property (nonatomic, MB_STRONG) UIColor *progressColor;
 
 @end

@@ -46,7 +46,6 @@
 		B111A2661E67FE0C0081A3A5 /* libWhalePaySDK.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libWhalePaySDK.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		B111A2741E67FE5A0081A3A5 /* ControllerActivity.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ControllerActivity.h; sourceTree = "<group>"; };
 		B111A2751E67FE5A0081A3A5 /* MBProgressHUD.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MBProgressHUD.h; sourceTree = "<group>"; };
-		B111A2761E67FE5A0081A3A5 /* LHQResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = LHQResources.bundle; sourceTree = "<group>"; };
 		B111A2771E67FE5A0081A3A5 /* libLHQPayCSH.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libLHQPayCSH.a; sourceTree = "<group>"; };
 		B111A2791E67FE5A0081A3A5 /* libcrypto.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libcrypto.a; sourceTree = "<group>"; };
 		B111A27A1E67FE5A0081A3A5 /* libssl.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libssl.a; sourceTree = "<group>"; };
@@ -157,6 +156,7 @@
 		B1C83A3F1E6E47A300C95A90 /* WhalePayWayCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = WhalePayWayCell.xib; sourceTree = "<group>"; };
 		B1C83A481E6E628200C95A90 /* UIImageView+WhaleHelper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "UIImageView+WhaleHelper.h"; sourceTree = "<group>"; };
 		B1C83A491E6E628200C95A90 /* UIImageView+WhaleHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "UIImageView+WhaleHelper.m"; sourceTree = "<group>"; };
+		B1F02E191E6F974700E5A2FA /* WhaleResources.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = WhaleResources.bundle; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -200,6 +200,7 @@
 				B1C83A3D1E6E47A300C95A90 /* WhalePayWayCell.h */,
 				B1C83A3E1E6E47A300C95A90 /* WhalePayWayCell.m */,
 				B1C83A3F1E6E47A300C95A90 /* WhalePayWayCell.xib */,
+				B1F02E191E6F974700E5A2FA /* WhaleResources.bundle */,
 			);
 			path = WhalePaySDK;
 			sourceTree = "<group>";
@@ -208,7 +209,6 @@
 			isa = PBXGroup;
 			children = (
 				B111A2731E67FE5A0081A3A5 /* LHQPay */,
-				B111A2761E67FE5A0081A3A5 /* LHQResources.bundle */,
 				B111A2771E67FE5A0081A3A5 /* libLHQPayCSH.a */,
 			);
 			path = LHQ;

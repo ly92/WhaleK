@@ -135,7 +135,7 @@
     [self.view addSubview:self.tableView];
     
     if (![self.bundleName isNotNull]){
-        self.bundleName = @"LHQResources";
+        self.bundleName = @"WhaleResources";
     }
     //返回按钮
     NSString * path = [[NSBundle mainBundle] pathForResource:self.bundleName ofType:@"bundle"];
@@ -530,9 +530,9 @@
                 }else if (self.payWayList.count == 1){
                     //只有一种支付方式
                     self.payWay = [NSDictionary dictionaryWithDictionary:self.payWayList[0]];
+                    //获取预支付订单
                     [self getPreparePayOrderPayWay];
-                    //支付方式列表
-                    [MBProgressHUD hideHUDForView:self.view animated:YES];
+                    
                 }else{
                     //无支付方式可用
                     [MBProgressHUD showMessage:@"无支付方式可用,请联系奥科管理员" toView:self.view];

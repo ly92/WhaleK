@@ -53,6 +53,7 @@ return __singleton__; \
  1002	“数据异常，交易失败”
  1003	“数据异常，请求失败”
  1004	“必填参数缺少或异常”
+ 1005   "其他错误类型"
  */
 typedef void (^AKPayCompletion)(NSDictionary *result);
 

@@ -20,6 +20,17 @@
 		B111A3001E67FF210081A3A5 /* NSDate+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E01E67FE5B0081A3A5 /* NSDate+WhaleHelper.m */; };
 		B111A3011E67FF210081A3A5 /* NSString+WhaleHelper.h in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E11E67FE5B0081A3A5 /* NSString+WhaleHelper.h */; };
 		B111A3021E67FF210081A3A5 /* NSString+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E21E67FE5B0081A3A5 /* NSString+WhaleHelper.m */; };
+		B128DBA81E7657FB00399F25 /* AlipaySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBA11E7657FB00399F25 /* AlipaySDK.framework */; };
+		B128DBA91E7657FB00399F25 /* libWeChatSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBA31E7657FB00399F25 /* libWeChatSDK.a */; };
+		B128DBAC1E76582700399F25 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBAB1E76582700399F25 /* CoreMotion.framework */; };
+		B128DBAF1E76583700399F25 /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBAD1E76583700399F25 /* CoreTelephony.framework */; };
+		B128DBB01E76583700399F25 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBAE1E76583700399F25 /* CoreText.framework */; };
+		B128DBB21E76584000399F25 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBB11E76584000399F25 /* Foundation.framework */; };
+		B128DBB41E76584500399F25 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBB31E76584500399F25 /* UIKit.framework */; };
+		B128DBB61E76584C00399F25 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBB51E76584C00399F25 /* CoreGraphics.framework */; };
+		B128DBB81E76585C00399F25 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBB71E76585C00399F25 /* QuartzCore.framework */; };
+		B128DBBA1E76586400399F25 /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBB91E76586400399F25 /* CFNetwork.framework */; };
+		B128DBBC1E76586E00399F25 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBBB1E76586E00399F25 /* Security.framework */; };
 		B1C83A401E6E47A300C95A90 /* WhalePayWayCell.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A3E1E6E47A300C95A90 /* WhalePayWayCell.m */; };
 		B1C83A411E6E4A5C00C95A90 /* WhalePayWayCell.h in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A3D1E6E47A300C95A90 /* WhalePayWayCell.h */; };
 		B1C83A4A1E6E628200C95A90 /* UIImageView+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C83A491E6E628200C95A90 /* UIImageView+WhaleHelper.m */; };
@@ -149,6 +160,25 @@
 		B111A2E21E67FE5B0081A3A5 /* NSString+WhaleHelper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+WhaleHelper.m"; sourceTree = "<group>"; };
 		B111A2E31E67FE5B0081A3A5 /* WhalePayViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WhalePayViewController.h; sourceTree = "<group>"; };
 		B111A2E41E67FE5B0081A3A5 /* WhalePayViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WhalePayViewController.m; sourceTree = "<group>"; };
+		B128DBA01E7657FB00399F25 /* AlipaySDK.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = AlipaySDK.bundle; sourceTree = "<group>"; };
+		B128DBA11E7657FB00399F25 /* AlipaySDK.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; path = AlipaySDK.framework; sourceTree = "<group>"; };
+		B128DBA31E7657FB00399F25 /* libWeChatSDK.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = libWeChatSDK.a; sourceTree = "<group>"; };
+		B128DBA41E7657FB00399F25 /* README.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = README.txt; sourceTree = "<group>"; };
+		B128DBA51E7657FB00399F25 /* WechatAuthSDK.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WechatAuthSDK.h; sourceTree = "<group>"; };
+		B128DBA61E7657FB00399F25 /* WXApi.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WXApi.h; sourceTree = "<group>"; };
+		B128DBA71E7657FB00399F25 /* WXApiObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WXApiObject.h; sourceTree = "<group>"; };
+		B128DBAB1E76582700399F25 /* CoreMotion.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreMotion.framework; path = System/Library/Frameworks/CoreMotion.framework; sourceTree = SDKROOT; };
+		B128DBAD1E76583700399F25 /* CoreTelephony.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreTelephony.framework; path = System/Library/Frameworks/CoreTelephony.framework; sourceTree = SDKROOT; };
+		B128DBAE1E76583700399F25 /* CoreText.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreText.framework; path = System/Library/Frameworks/CoreText.framework; sourceTree = SDKROOT; };
+		B128DBB11E76584000399F25 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		B128DBB31E76584500399F25 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
+		B128DBB51E76584C00399F25 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
+		B128DBB71E76585C00399F25 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
+		B128DBB91E76586400399F25 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
+		B128DBBB1E76586E00399F25 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		B1C46BFF1E768A7E00EC4D8F /* libc++.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = "libc++.tbd"; path = "usr/lib/libc++.tbd"; sourceTree = SDKROOT; };
+		B1C46C011E768A8600EC4D8F /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
+		B1C46C031E768A9000EC4D8F /* libsqlite3.0.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libsqlite3.0.tbd; path = usr/lib/libsqlite3.0.tbd; sourceTree = SDKROOT; };
 		B1C83A3D1E6E47A300C95A90 /* WhalePayWayCell.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = WhalePayWayCell.h; sourceTree = "<group>"; };
 		B1C83A3E1E6E47A300C95A90 /* WhalePayWayCell.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = WhalePayWayCell.m; sourceTree = "<group>"; };
 		B1C83A3F1E6E47A300C95A90 /* WhalePayWayCell.xib */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.xib; path = WhalePayWayCell.xib; sourceTree = "<group>"; };
@@ -161,9 +191,20 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B128DBBC1E76586E00399F25 /* Security.framework in Frameworks */,
+				B128DBBA1E76586400399F25 /* CFNetwork.framework in Frameworks */,
+				B128DBB81E76585C00399F25 /* QuartzCore.framework in Frameworks */,
+				B128DBB61E76584C00399F25 /* CoreGraphics.framework in Frameworks */,
+				B128DBB41E76584500399F25 /* UIKit.framework in Frameworks */,
+				B128DBB21E76584000399F25 /* Foundation.framework in Frameworks */,
+				B128DBAF1E76583700399F25 /* CoreTelephony.framework in Frameworks */,
+				B128DBB01E76583700399F25 /* CoreText.framework in Frameworks */,
+				B128DBAC1E76582700399F25 /* CoreMotion.framework in Frameworks */,
 				B111A2E61E67FE5B0081A3A5 /* libcrypto.a in Frameworks */,
+				B128DBA81E7657FB00399F25 /* AlipaySDK.framework in Frameworks */,
 				B111A2E51E67FE5B0081A3A5 /* libLHQPayCSH.a in Frameworks */,
 				B111A2E71E67FE5B0081A3A5 /* libssl.a in Frameworks */,
+				B128DBA91E7657FB00399F25 /* libWeChatSDK.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -175,6 +216,7 @@
 			children = (
 				B111A2681E67FE0C0081A3A5 /* WhalePaySDK */,
 				B111A2671E67FE0C0081A3A5 /* Products */,
+				B128DBAA1E76582700399F25 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -189,6 +231,8 @@
 		B111A2681E67FE0C0081A3A5 /* WhalePaySDK */ = {
 			isa = PBXGroup;
 			children = (
+				B128DB9F1E7657FB00399F25 /* AliPay */,
+				B128DBA21E7657FB00399F25 /* WeiXin */,
 				B111A2721E67FE5A0081A3A5 /* LHQ */,
 				B111A2781E67FE5A0081A3A5 /* RES */,
 				B111A2DC1E67FE5B0081A3A5 /* Tools */,
@@ -360,6 +404,46 @@
 			path = Tools;
 			sourceTree = "<group>";
 		};
+		B128DB9F1E7657FB00399F25 /* AliPay */ = {
+			isa = PBXGroup;
+			children = (
+				B128DBA01E7657FB00399F25 /* AlipaySDK.bundle */,
+				B128DBA11E7657FB00399F25 /* AlipaySDK.framework */,
+			);
+			path = AliPay;
+			sourceTree = "<group>";
+		};
+		B128DBA21E7657FB00399F25 /* WeiXin */ = {
+			isa = PBXGroup;
+			children = (
+				B128DBA31E7657FB00399F25 /* libWeChatSDK.a */,
+				B128DBA41E7657FB00399F25 /* README.txt */,
+				B128DBA51E7657FB00399F25 /* WechatAuthSDK.h */,
+				B128DBA61E7657FB00399F25 /* WXApi.h */,
+				B128DBA71E7657FB00399F25 /* WXApiObject.h */,
+			);
+			path = WeiXin;
+			sourceTree = "<group>";
+		};
+		B128DBAA1E76582700399F25 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				B1C46C031E768A9000EC4D8F /* libsqlite3.0.tbd */,
+				B1C46C011E768A8600EC4D8F /* libz.tbd */,
+				B1C46BFF1E768A7E00EC4D8F /* libc++.tbd */,
+				B128DBBB1E76586E00399F25 /* Security.framework */,
+				B128DBB91E76586400399F25 /* CFNetwork.framework */,
+				B128DBB71E76585C00399F25 /* QuartzCore.framework */,
+				B128DBB51E76584C00399F25 /* CoreGraphics.framework */,
+				B128DBB31E76584500399F25 /* UIKit.framework */,
+				B128DBB11E76584000399F25 /* Foundation.framework */,
+				B128DBAD1E76583700399F25 /* CoreTelephony.framework */,
+				B128DBAE1E76583700399F25 /* CoreText.framework */,
+				B128DBAB1E76582700399F25 /* CoreMotion.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -529,16 +613,26 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEVELOPMENT_TEAM = ZW9XLD4957;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/WhalePaySDK/AliPay",
+				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/WhalePaySDK/LHQ",
 					"$(PROJECT_DIR)/WhalePaySDK/RES",
+					"$(PROJECT_DIR)/WhalePaySDK/WeiXin",
+					"$(PROJECT_DIR)/WhalePaySDK/AliPay",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/WhalePaySDK/LHQ",
 					"$(PROJECT_DIR)/WhalePaySDK/RES",
+					"$(PROJECT_DIR)/WhalePaySDK/WeiXin",
 				);
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-all_load",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};
@@ -548,16 +642,26 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				DEVELOPMENT_TEAM = ZW9XLD4957;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/WhalePaySDK/AliPay",
+				);
 				HEADER_SEARCH_PATHS = (
 					"$(PROJECT_DIR)/WhalePaySDK/LHQ",
 					"$(PROJECT_DIR)/WhalePaySDK/RES",
+					"$(PROJECT_DIR)/WhalePaySDK/WeiXin",
+					"$(PROJECT_DIR)/WhalePaySDK/AliPay",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/WhalePaySDK/LHQ",
 					"$(PROJECT_DIR)/WhalePaySDK/RES",
+					"$(PROJECT_DIR)/WhalePaySDK/WeiXin",
 				);
-				OTHER_LDFLAGS = "-ObjC";
+				OTHER_LDFLAGS = (
+					"-ObjC",
+					"-all_load",
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 			};

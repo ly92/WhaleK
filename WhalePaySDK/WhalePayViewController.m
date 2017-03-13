@@ -20,6 +20,10 @@
 #import "WhalePayWayCell.h"
 #import "UIImageView+WhaleHelper.h"
 
+//微信
+#import "WXApi.h"
+//支付宝
+#import <AlipaySDK/AlipaySDK.h>
 
 /**
  SDK与金融平台的交互流程：
@@ -46,7 +50,7 @@
 @end
 
 
-@interface WhalePayViewController ()<UITableViewDelegate,UITableViewDataSource>
+@interface WhalePayViewController ()<UITableViewDelegate,UITableViewDataSource,WXApiDelegate>
 
 @property (strong, nonatomic) WPOrder *wpOrder;//
 @property (strong, nonatomic) NSDictionary *payWay;//选择的支付通道
@@ -57,6 +61,7 @@
 @property (nonatomic, copy) NSString *appkey;//接入应用新增成功后，系统将自动生成20位的appkey和32位的appsercet
 @property (nonatomic, copy) NSString *appsecret;//接入应用新增成功后，系统将自动生成20位的appkey和32位的appsercet
 @property (copy, nonatomic) NSString *wxAppid;//微信支付appid
+@property (copy, nonatomic) NSString *aliSchemel;//ali支付schemel
 
 
 @property (copy, nonatomic) AKPayCompletion akCompletionBlock;
@@ -120,6 +125,10 @@
         self.navigationItem.title = @"支付";
     }
     
+    if (![self.bundleName isNotNull]){
+        self.bundleName = @"WhaleResources";
+    }
+    
 }
 
 - (void)viewDidLoad {
@@ -134,9 +143,7 @@
     self.tableView.dataSource = self;
     [self.view addSubview:self.tableView];
     
-    if (![self.bundleName isNotNull]){
-        self.bundleName = @"WhaleResources";
-    }
+    
     //返回按钮
     NSString * path = [[NSBundle mainBundle] pathForResource:self.bundleName ofType:@"bundle"];
     UIImage *backImg = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"arrow.png"]];
@@ -313,6 +320,33 @@
  */
 - (BOOL)handleOpenURL:(NSURL *)url withCompletion:(AKPayCompletion)completion{
     
+    //如果极简开发包不可用，会跳转支付宝钱包进行支付，需要将支付宝钱包的支付结果回传给开发包
+    if ([url.host isEqualToString:@"safepay"]) {
+        [[AlipaySDK defaultService] processOrderWithPaymentResult:url standbyCallback:^(NSDictionary *resultDic) {
+            //【由于在跳转支付宝客户端支付的过程中，商户app在后台很可能被系统kill了，所以pay接口的callback就会失效，请商户对standbyCallback返回的回调结果进行处理,就是在这个方法里面处理跟callback一样的逻辑】
+            
+            //处理支付结果
+            [self aliPayResult:resultDic];
+            NSLog(@"result = %@",resultDic);
+        }];
+        return YES;
+    }
+    if ([url.host isEqualToString:@"platformapi"]){//支付宝钱包快登授权返回authCode
+        
+        [[AlipaySDK defaultService] processAuthResult:url standbyCallback:^(NSDictionary *resultDic) {
+            //【由于在跳转支付宝客户端支付的过程中，商户app在后台很可能被系统kill了，所以pay接口的callback就会失效，请商户对standbyCallback返回的回调结果进行处理,就是在这个方法里面处理跟callback一样的逻辑】
+            NSLog(@"result = %@",resultDic);
+            
+            //处理支付结果
+            [self aliPayResult:resultDic];
+        }];
+        return YES;
+    }
+    
+    NSString *urlStr = [url absoluteString];
+    if ([urlStr hasPrefix:self.wxAppid]){
+        return [WXApi handleOpenURL:url delegate:self];
+    }
     
     return YES;
 }
@@ -328,8 +362,34 @@
  */
 - (BOOL)handleOpenURL:(NSURL *)url sourceApplication:(NSString *)sourceApplication withCompletion:(AKPayCompletion)completion{
     
+    //如果极简开发包不可用，会跳转支付宝钱包进行支付，需要将支付宝钱包的支付结果回传给开发包
+    if ([url.host isEqualToString:@"safepay"]) {
+        [[AlipaySDK defaultService] processOrderWithPaymentResult:url standbyCallback:^(NSDictionary *resultDic) {
+            //【由于在跳转支付宝客户端支付的过程中，商户app在后台很可能被系统kill了，所以pay接口的callback就会失效，请商户对standbyCallback返回的回调结果进行处理,就是在这个方法里面处理跟callback一样的逻辑】
+            NSLog(@"result = %@",resultDic);
+            //处理支付结果
+            [self aliPayResult:resultDic];
+        }];
+        return YES;
+    }
+    if ([url.host isEqualToString:@"platformapi"]){//支付宝钱包快登授权返回authCode
+        
+        [[AlipaySDK defaultService] processAuthResult:url standbyCallback:^(NSDictionary *resultDic) {
+            //【由于在跳转支付宝客户端支付的过程中，商户app在后台很可能被系统kill了，所以pay接口的callback就会失效，请商户对standbyCallback返回的回调结果进行处理,就是在这个方法里面处理跟callback一样的逻辑】
+            NSLog(@"result = %@",resultDic);
+            //处理支付结果
+            [self aliPayResult:resultDic];
+        }];
+        return YES;
+    }
+    
+    NSString *urlStr = [url absoluteString];
+    if ([urlStr hasPrefix:self.wxAppid]){
+        return [WXApi handleOpenURL:url delegate:self];
+    }
     
     return YES;
+    
 }
 
 /**
@@ -341,11 +401,12 @@
     self.wxAppid = [dict objectForKey:@"wxAppid"];
     self.appkey = [dict objectForKey:@"appkey"];
     self.appsecret = [dict objectForKey:@"appsecret"];
+    self.aliSchemel = [dict objectForKey:@"aliSchemel"];
     
+    //向微信注册
+    [WXApi registerApp:self.wxAppid];
     
 }
-
-
 
 #pragma mark - 获取token
 //from    1:支付通道   2:预支付订单
@@ -799,8 +860,10 @@
                            @"callback"  : self.wpOrder.callback,
                            @"remoteip"  : self.wpOrder.remoteip,
                            @"fixedorgmoney" : self.wpOrder.fixedorgmoney,
-                           @"orgsubaccount" : [NSString dictionaryToJson:self.wpOrder.orgsubaccount],
-                           @"destsubaccount" : [NSString dictionaryToJson:self.wpOrder.destsubaccount]
+                           //                           @"orgsubaccount" : [NSString dictionaryToJson:self.wpOrder.orgsubaccount],
+                           //                           @"destsubaccount" : [NSString dictionaryToJson:self.wpOrder.destsubaccount]
+                           @"orgsubaccount" : @"",
+                           @"destsubaccount" : @""
                            };
     NSData* data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
     NSString *bodyData = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
@@ -863,12 +926,124 @@
 
 //微信支付
 - (void)wxPayAction:(NSDictionary *)payInfo{
+    /**
+     {
+     code = 0;
+     content =     {
+     payinfo =         {
+     appId = wx42967af88ec99501;
+     nonceStr = cyJpTi1rdzigZeHa;
+     packageValue = "Sign=WXPay";
+     partnerId = 1294012101;
+     paytype = weixin;
+     prepayId = wx20170310165751e4a58a71c10809819678;
+     sign = 7595124F39B16B51398294946CC3BA19;
+     timeStamp = 1489136271;
+     tno = "1703_201703101657511b3244aebbf81";
+     };
+     };
+     contentEncrypt = "";
+     message = "";
+     }
+     */
+    NSString *appId = [payInfo objectForKey:@"appId"];
+    NSString *partnerId = [payInfo objectForKey:@"partnerId"];
+    NSString *prepayId = [payInfo objectForKey:@"prepayId"];
+    NSString *nonceStr = [payInfo objectForKey:@"nonceStr"];
+    NSString *timeStamp = [payInfo objectForKey:@"timeStamp"];
+    NSString *packageValue = [payInfo objectForKey:@"packageValue"];
+    NSString *sign = [payInfo objectForKey:@"sign"];
+    
+    
+    if ([WXApi isWXAppInstalled]){
+        //调起微信支付
+        PayReq* req             = [[PayReq alloc] init];
+        req.openID              = appId;
+        req.partnerId           = partnerId;
+        req.prepayId            = prepayId;
+        req.nonceStr            = nonceStr;
+        req.timeStamp           = [timeStamp intValue];
+        req.package             = packageValue;
+        req.sign                = sign;
+        
+        [WXApi sendReq:req];
+        
+    }else{
+        [MBProgressHUD showMessage:@"请安装微信" toView:self.view];
+    }
     
 }
 
+/**
+ 微信回调
+ */
+- (void)onResp:(BaseResp *)resp{
+    if ([resp isKindOfClass:[PayResp class]]){
+        switch (resp.errCode) {
+            case WXSuccess:
+                //支付成功
+                self.payResult = @{
+                                   @"code" : @"0",
+                                   @"message" : @"支付成功"
+                                   };
+                [self dealPayResult];
+                break;
+            case WXErrCodeUserCancel:
+                //客户取消操作
+                self.payResult = @{
+                                   @"code" : @"1000",
+                                   @"message" : @"客户取消操作"
+                                   };
+                [self dealPayResult];
+                break;
+            default:
+                self.payResult = @{
+                                   @"code" : @"1005",
+                                   @"message" : resp.errStr ? resp.errStr : @"支付失败"
+                                   };
+                [self dealPayResult];
+                break;
+        }
+    }
+}
+
+
+
 //支付宝支付
 - (void)aliPayAction:(NSDictionary *)payInfo{
+    NSString *orderStr = [payInfo objectForKey:@"orderInfo"];
     
+    //支付宝
+    [[AlipaySDK defaultService] payOrder:orderStr fromScheme:self.aliSchemel callback:^(NSDictionary *resultDic) {
+        //处理支付结果
+        [self aliPayResult:resultDic];
+    }];
+}
+
+- (void)aliPayResult:(NSDictionary *)resultDic{
+    if ([[resultDic objectForKey:@"resultStatus"] isEqualToString:@"9000"]){
+        //支付成功
+        self.payResult = @{
+                           @"code" : @"0",
+                           @"message" : @"支付成功"
+                           };
+        [self dealPayResult];
+    }else if ([[resultDic objectForKey:@"resultStatus"] isEqualToString:@"6001"]){
+        //支付取消
+        self.payResult = @{
+                           @"code" : @"1000",
+                           @"message" : @"支付取消"
+                           };
+        [self dealPayResult];
+    }else{
+        //支付失败
+        NSString *memo = [resultDic objectForKey:@"memo"];
+        self.payResult = @{
+                           @"code" : @"1005",
+                           @"message" : [memo isNotNull] ? memo : @"支付失败"
+                           };
+        [self dealPayResult];
+    }
 }
 
 //双乾支付

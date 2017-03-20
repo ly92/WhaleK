@@ -20,8 +20,6 @@
 		B111A3001E67FF210081A3A5 /* NSDate+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E01E67FE5B0081A3A5 /* NSDate+WhaleHelper.m */; };
 		B111A3011E67FF210081A3A5 /* NSString+WhaleHelper.h in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E11E67FE5B0081A3A5 /* NSString+WhaleHelper.h */; };
 		B111A3021E67FF210081A3A5 /* NSString+WhaleHelper.m in Sources */ = {isa = PBXBuildFile; fileRef = B111A2E21E67FE5B0081A3A5 /* NSString+WhaleHelper.m */; };
-		B128DBA81E7657FB00399F25 /* AlipaySDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBA11E7657FB00399F25 /* AlipaySDK.framework */; };
-		B128DBA91E7657FB00399F25 /* libWeChatSDK.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBA31E7657FB00399F25 /* libWeChatSDK.a */; };
 		B128DBAC1E76582700399F25 /* CoreMotion.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBAB1E76582700399F25 /* CoreMotion.framework */; };
 		B128DBAF1E76583700399F25 /* CoreTelephony.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBAD1E76583700399F25 /* CoreTelephony.framework */; };
 		B128DBB01E76583700399F25 /* CoreText.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B128DBAE1E76583700399F25 /* CoreText.framework */; };
@@ -201,10 +199,8 @@
 				B128DBB01E76583700399F25 /* CoreText.framework in Frameworks */,
 				B128DBAC1E76582700399F25 /* CoreMotion.framework in Frameworks */,
 				B111A2E61E67FE5B0081A3A5 /* libcrypto.a in Frameworks */,
-				B128DBA81E7657FB00399F25 /* AlipaySDK.framework in Frameworks */,
 				B111A2E51E67FE5B0081A3A5 /* libLHQPayCSH.a in Frameworks */,
 				B111A2E71E67FE5B0081A3A5 /* libssl.a in Frameworks */,
-				B128DBA91E7657FB00399F25 /* libWeChatSDK.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

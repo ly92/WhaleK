@@ -145,8 +145,11 @@
     
     
     //返回按钮
+    if (![self.bundleName isNotNull]){
+        self.bundleName = @"WhaleResources";
+    }
     NSString * path = [[NSBundle mainBundle] pathForResource:self.bundleName ofType:@"bundle"];
-    UIImage *backImg = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"arrow.png"]];
+    UIImage *backImg = [UIImage imageWithContentsOfFile:[path stringByAppendingPathComponent:@"arrow"]];
     UIButton *backBtn = [[UIButton alloc] initWithFrame:CGRectMake(15, 25, 10, 15)];
     [backBtn setImage:backImg forState:UIControlStateNormal];
     [backBtn addTarget:self action:@selector(dealPayResult) forControlEvents:UIControlEventTouchUpInside];
